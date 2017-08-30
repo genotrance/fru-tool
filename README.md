@@ -39,7 +39,7 @@ Detailed usage information and use cases for the OEM FRU feature can be found in
 In order to contribute, feel free to fork the project and submit a pull request with all your changes and a description on what was added or removed and why. If approved, the project owners will merge it.
 
 ## Licensing
-*fru-tool* is freely distributed under the [MIT License](http://emccode.github.io/sampledocs/LICENSE).
+*fru-tool* is freely distributed under the [MIT License](LICENSE.txt).
 
 ## Support
 Please file bugs and issues on the Github issues page for this project. For general discussions and further support you can join the [{code} Community slack channel](http://community.codedellemc.com/). The code and documentation are released with no warranties or SLAs and are intended to be supported through a community driven process.
