@@ -6,14 +6,15 @@
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
 
+import os
+import struct
+import sys
+
 try:
     import configparser
 except:
     import ConfigParser as configparser
 
-import os
-import struct
-import sys
 
 CONFIG = None
 VERSION = 1
