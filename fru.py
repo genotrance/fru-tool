@@ -28,12 +28,12 @@ def dummystr(length):
     return out[:length]
 
 
-def read_config(file):
+def read_config(path):
     global CONFIG
     global VERSION
 
     CONFIG = configparser.ConfigParser()
-    CONFIG.read(file)
+    CONFIG.read(path)
 
     if "common" not in CONFIG.sections():
         print("[common] section missing in config")
