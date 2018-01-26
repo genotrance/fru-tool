@@ -17,12 +17,9 @@ sections = ['all', 'board', 'chassis', 'empty', 'internal', 'product']
 
 @pytest.mark.parametrize('name', sections)
 def test_basic_ini_sections(name):
-    fru.CONFIG = None
-    fru.VERSION = 1
-
     path = os.path.join(os.path.dirname(__file__), 'basic-{}.ini'.format(name))
-    fru.read_config(path)
-    actual = fru.make_fru()
+    config = fru.read_config(path)
+    actual = fru.make_fru(config)
 
     path = os.path.join(os.path.dirname(__file__), 'basic-{}.bin'.format(name))
     with open(path, 'rb') as f:
