@@ -16,6 +16,8 @@ except ImportError:
     import ConfigParser as configparser
 
 
+__version__ = "1.0"
+
 CONFIG = None
 VERSION = 1
 EXTRAS = ["extra1", "extra2", "extra3", "extra4", "extra5", "extra6", "extra7", "extra8", "extra9"]
