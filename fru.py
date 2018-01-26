@@ -12,7 +12,7 @@ import sys
 
 try:
     import configparser
-except:
+except ImportError:
     import ConfigParser as configparser
 
 
@@ -120,11 +120,11 @@ def make_internal():
                 value = open(CONFIG.get("internal", "file"), "r").read()
                 try:
                     value = bytes(value, "ascii")
-                except:
+                except TypeError:
                     pass
                 out += struct.pack("B%ds" % len(value), VERSION, value)
                 print("Adding internal file")
-            except:
+            except (configparser.NoSectionError, configparser.NoOptionError, IOError):
                 print("Skipping [internal] file %s - missing" % CONFIG.get("internal", "file"))
     return out
 
@@ -148,7 +148,7 @@ def make_chassis():
                 value = CONFIG.get("chassis", i).strip('"')
                 try:
                     value = bytes(value, "ascii")
-                except:
+                except TypeError:
                     pass
                 out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
                 if "--cmd" in sys.argv:
@@ -202,7 +202,7 @@ def make_board():
                 value = CONFIG.get("board", i).strip('"')
                 try:
                     value = bytes(value, "ascii")
-                except:
+                except TypeError:
                     pass
                 out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
                 if "--cmd" in sys.argv:
@@ -249,7 +249,7 @@ def make_product():
                 value = CONFIG.get("product", i).strip('"')
                 try:
                     value = bytes(value, "ascii")
-                except:
+                except TypeError:
                     pass
                 out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
                 if "--cmd" in sys.argv:
