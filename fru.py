@@ -113,7 +113,11 @@ def make_internal():
         # Data
         if "data" in CONFIG.options("internal") and CONFIG.get("internal", "data") != "":
             value = CONFIG.get("internal", "data")
-            out += struct.pack("B%ds" % len(value), VERSION, bytes(value, "ascii"))
+            try:
+                value = bytes(value, "ascii")
+            except TypeError:
+                pass
+            out += struct.pack("B%ds" % len(value), VERSION, value)
             print("Adding internal data")
         elif "file" in CONFIG.options("internal") and CONFIG.get("internal", "file") != "":
             try:
