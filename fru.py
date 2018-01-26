@@ -295,5 +295,5 @@ if __name__ == "__main__":
         sys.exit()
 
     read_config(sys.argv[1])
-    out = make_fru()
-    f = open(sys.argv[2], "wb").write(out)
+    blob = make_fru()
+    f = open(sys.argv[2], "wb").write(blob)
