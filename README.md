@@ -3,7 +3,7 @@ fru-tool
 *fru-tool* is a command-line utility for generating IPMI FRU binary data files.
 
 ## Description
-Every modern component of a computer or electronic equipment, commonly referred to as a Field Replaceable Unit or FRU, contains a memory block that stores the inventory information of that component. This includes the manufacturer�s name, product name, manufacture date, serial numbers and other details that help identify the component.
+Every modern component of a computer or electronic equipment, commonly referred to as a Field Replaceable Unit or FRU, contains a memory block that stores the inventory information of that component. This includes the manufacturer's name, product name, manufacture date, serial numbers and other details that help identify the component.
 
 The Intel FRU Information Storage for IPMI [specification](http://www.intel.com/content/dam/www/public/us/en/documents/product-briefs/platform-management-fru-document-rev-1-2-feb-2013.pdf) defines the standard format that devices are expected to conform to within their FRU areas. Dell EMC PowerEdge servers leverage this format across the board, from PCIe controllers to power supplies to the chassis itself. Each component vendor populates the FRU area during their manufacturing process and all FRU areas are easily accessible via IPMI.
 
@@ -16,7 +16,7 @@ While this *fru-tool* was specifically authored to support this OEM use case, it
 ## Prerequisites
 *fru-tool* has been tested with Python version 2.7 and 3.5 which can be downloaded and installed from www.python.org.
 
-In order to write, read or edit the OEM FRU storage area on the target server, the open source [IPMItool](https://sourceforge.net/projects/ipmitool/) utility or equivalent is required. This utility can be installed on Linux distributions by using the built-in package manager such as yum or apt-get. Dell EMC provides a Windows version which can be found in the *Driver and Downloads* section for any PowerEdge server on [Dell EMC Support](http://support.dell.com) under the *Systems Management* section. It is contained in the package named *Dell OpenManage BMC Utility* which can also be found on Google by searching for the package by name. For documentation on IPMItool, search for �man ipmitool� on Google.
+In order to write, read or edit the OEM FRU storage area on the target server, the open source [IPMItool](https://sourceforge.net/projects/ipmitool/) utility or equivalent is required. This utility can be installed on Linux distributions by using the built-in package manager such as yum or apt-get. Dell EMC provides a Windows version which can be found in the *Driver and Downloads* section for any PowerEdge server on [Dell EMC Support](http://support.dell.com) under the *Systems Management* section. It is contained in the package named *Dell OpenManage BMC Utility* which can also be found on Google by searching for the package by name. For documentation on IPMItool, search for 'man ipmitool' on Google.
 
 ## Installation
 Installation is as simple as cloning or downloading this project from GitHub. The main files of interest are the [fru.py](fru.py) Python script and [fru.ini](fru.ini) which defines the contents of the FRU binary.
