@@ -1,3 +1,11 @@
+# fru.py - Generate a binary IPMI FRU data file.
+# Copyright (c) 2017 Dell Technologies
+#
+# https://github.com/genotrance/fru-tool/
+#
+# Licensed under the terms of the MIT License:
+# https://opensource.org/licenses/MIT
+
 try:
     import configparser
 except:
