@@ -34,23 +34,23 @@ def read_config(file):
     CONFIG = configparser.ConfigParser()
     CONFIG.read(file)
 
-    if not "common" in CONFIG.sections():
+    if "common" not in CONFIG.sections():
         print("[common] section missing in config")
         sys.exit()
 
-    if not "version" in CONFIG.options("common"):
+    if "version" not in CONFIG.options("common"):
         print("'version' missing in [common]")
         sys.exit()
     else:
         VERSION = int(CONFIG.get("common", "version"))
 
-    if not "size" in CONFIG.options("common"):
+    if "size" not in CONFIG.options("common"):
         print("'size' missing in [common]")
         sys.exit()
 
     for i in ["internal", "chassis", "board", "product", "multirecord"]:
         if i in CONFIG.options("common") and CONFIG.get("common", i) == "1":
-            if not i in CONFIG.sections():
+            if i not in CONFIG.sections():
                 print("Skipping '%s = 1' - [%s] section missing" % (i, i))
                 CONFIG.set("common", i, "0")
 
@@ -285,7 +285,7 @@ if __name__ == "__main__":
         print("Missing INI file %s" % sys.argv[1])
         sys.exit()
 
-    if os.path.exists(sys.argv[2]) and not "--force" in sys.argv:
+    if os.path.exists(sys.argv[2]) and "--force" not in sys.argv:
         print("BIN file %s exists" % sys.argv[2])
         sys.exit()
 
