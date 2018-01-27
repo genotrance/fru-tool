@@ -40,15 +40,6 @@ def read_config(path):
         for section in parser.sections()
     }
 
-    if "common" not in config:
-        raise ValueError("[common] section missing in config")
-
-    if "version" not in config["common"]:
-        raise ValueError("'version' missing in [common]")
-
-    if "size" not in config["common"]:
-        raise ValueError("'size' missing in [common]")
-
     for k in ["internal", "chassis", "board", "product", "multirecord"]:
         config["common"].setdefault(k, "0")
         if config["common"][k] == "1" and k not in config:
@@ -62,6 +53,15 @@ def read_config(path):
 
 
 def make_fru(config):
+    if "common" not in config:
+        raise ValueError("[common] section missing in config")
+
+    if "version" not in config["common"]:
+        raise ValueError("'version' missing in [common]")
+
+    if "size" not in config["common"]:
+        raise ValueError("'size' missing in [common]")
+
     internal_offset = 0
     chassis_offset = 0
     board_offset = 0
@@ -98,7 +98,7 @@ def make_fru(config):
     # Header
     out = struct.pack(
         "BBBBBBB",
-        int(config["common"]["version"]),
+        int(config["common"].get("version", "1")),
         internal_offset,
         chassis_offset,
         board_offset,
@@ -130,7 +130,7 @@ def make_internal(config):
             value = bytes(value, "ascii")
         except TypeError:
             pass
-        out += struct.pack("B%ds" % len(value), int(config["common"]["version"]), value)
+        out += struct.pack("B%ds" % len(value), int(config["common"].get("version", "1")), value)
         print("Adding internal data")
     elif config["internal"].get("file"):
         try:
@@ -139,7 +139,7 @@ def make_internal(config):
                 value = bytes(value, "ascii")
             except TypeError:
                 pass
-            out += struct.pack("B%ds" % len(value), int(config["common"]["version"]), value)
+            out += struct.pack("B%ds" % len(value), int(config["common"].get("version", "1")), value)
             print("Adding internal file")
         except (configparser.NoSectionError, configparser.NoOptionError, IOError):
             print("Skipping [internal] file %s - missing" % config["internal"]["file"])
@@ -182,7 +182,7 @@ def make_chassis(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", int(config["common"]["version"]), int((len(out)+3)/8)) + out
+    out = struct.pack("BB", int(config["common"].get("version", "1")), int((len(out)+3)/8)) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
@@ -230,7 +230,7 @@ def make_board(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", int(config["common"]["version"]), int((len(out)+3)/8)) + out
+    out = struct.pack("BB", int(config["common"].get("version", "1")), int((len(out)+3)/8)) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
@@ -274,7 +274,7 @@ def make_product(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", int(config["common"]["version"]), int((len(out)+3)/8)) + out
+    out = struct.pack("BB", int(config["common"].get("version", "1")), int((len(out)+3)/8)) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
