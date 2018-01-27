@@ -126,6 +126,7 @@ def make_fru(config):
 
 def make_internal(config):
     out = bytes()
+
     # Data
     if config["internal"].get("data"):
         value = config["internal"]["data"]
@@ -151,11 +152,9 @@ def make_internal(config):
 
 def make_chassis(config):
     out = bytes()
+
     # Type
-    if config["chassis"].get("type"):
-        out += struct.pack("B", int(config["chassis"]["type"], 16))
-    else:
-        out += struct.pack("B", 0)
+    out += struct.pack("B", int(config["chassis"].get("type", "0"), 16))
 
     # Strings
     fields = ["part", "serial"]
@@ -199,17 +198,11 @@ def make_board(config):
     out = bytes()
 
     # Language
-    if config["board"].get("language"):
-        out += struct.pack("B", int(config["board"]["language"], 16))
-    else:
-        out += struct.pack("B", 0)
+    out += struct.pack("B", int(config["board"].get("language", "0"), 16))
 
     # Date
-    if config["board"].get("date"):
-        date = int(config["board"]["date"], 16)
-        out += struct.pack("BBB", date & 0xFF, (date & 0xFF00) >> 8, (date & 0xFF0000) >> 16)
-    else:
-        out += struct.pack("BBB", 0, 0, 0)
+    date = int(config["board"].get("date", "0"), 16)
+    out += struct.pack("BBB", date & 0xFF, (date & 0xFF00) >> 8, (date & 0xFF0000) >> 16)
 
     # Strings
     fields = ["manufacturer", "product", "serial", "part", "fileid"]
@@ -253,10 +246,7 @@ def make_product(config):
     out = bytes()
 
     # Language
-    if config["product"].get("language"):
-        out += struct.pack("B", int(config["product"]["language"], 16))
-    else:
-        out += struct.pack("B", 0)
+    out += struct.pack("B", int(config["product"].get("language", "0"), 16))
 
     # Strings
     fields = ["manufacturer", "product", "part", "version", "serial", "asset", "fileid"]
