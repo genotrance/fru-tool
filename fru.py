@@ -41,16 +41,13 @@ def read_config(path):
     }
 
     if "common" not in config:
-        print("[common] section missing in config")
-        sys.exit()
+        raise ValueError("[common] section missing in config")
 
     if "version" not in config["common"]:
-        print("'version' missing in [common]")
-        sys.exit()
+        raise ValueError("'version' missing in [common]")
 
     if "size" not in config["common"]:
-        print("'size' missing in [common]")
-        sys.exit()
+        raise ValueError("'size' missing in [common]")
 
     for k in ["internal", "chassis", "board", "product", "multirecord"]:
         config["common"].setdefault(k, "0")
@@ -118,8 +115,7 @@ def make_fru(config):
         pad += struct.pack("B", 0)
 
     if len(out + chassis + board + product + internal + pad) > int(config["common"]["size"]):
-        print("Too much content, does not fit")
-        sys.exit()
+        raise ValueError("Too much content, does not fit")
 
     return out + chassis + board + product + internal + pad
 
@@ -286,9 +282,19 @@ def make_product(config):
     return out
 
 
-if __name__ == "__main__":
+def run(ini_file, bin_file):  # pragma: nocover
+    try:
+        configuration = read_config(ini_file)
+        blob = make_fru(configuration)
+    except ValueError as error:
+        print(error.message)
+    else:
+        open(bin_file, "wb").write(blob)
+
+
+if __name__ == "__main__":  # pragma: nocover
     if len(sys.argv) < 3:
-        print("fru.py fru.ini fru.bin [--force][--cmd]")
+        print("fru.py input.ini output.bin [--force] [--cmd]")
         sys.exit()
 
     if not os.path.exists(sys.argv[1]):
@@ -299,6 +305,4 @@ if __name__ == "__main__":
         print("BIN file %s exists" % sys.argv[2])
         sys.exit()
 
-    configuration = read_config(sys.argv[1])
-    blob = make_fru(configuration)
-    f = open(sys.argv[2], "wb").write(blob)
+    run(sys.argv[1], sys.argv[2])
