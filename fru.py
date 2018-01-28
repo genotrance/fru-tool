@@ -1,276 +1,308 @@
-try:
-	import configparser
-except:
-	import ConfigParser as configparser
+# fru.py - Generate a binary IPMI FRU data file.
+# Copyright (c) 2017 Dell Technologies
+#
+# https://github.com/genotrance/fru-tool/
+#
+# Licensed under the terms of the MIT License:
+# https://opensource.org/licenses/MIT
 
 import os
 import struct
 import sys
 
-CONFIG = None
-VERSION = 1
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
+
+__version__ = "1.0"
+
 EXTRAS = ["extra1", "extra2", "extra3", "extra4", "extra5", "extra6", "extra7", "extra8", "extra9"]
 
+
 def dummystr(length):
-	out = "1234567890"
-	while len(out) < length:
-		out += "1234567890"
-	return out[:length]
+    out = "1234567890"
+    while len(out) < length:
+        out += "1234567890"
+    return out[:length]
 
-def read_config(file):
-	global CONFIG
-	global VERSION
 
-	CONFIG = configparser.ConfigParser()
-	CONFIG.read(file)
-	
-	if not "common" in CONFIG.sections():
-		print("[common] section missing in config")
-		sys.exit()
+def read_config(path):
+    parser = configparser.ConfigParser()
+    parser.read(path)
 
-	if not "version" in CONFIG.options("common"):
-		print("'version' missing in [common]")
-		sys.exit()
-	else:
-		VERSION = int(CONFIG.get("common", "version"))
+    config = {
+        section: {
+            option: parser.get(section, option).strip('"')
+            for option in parser.options(section)
+        }
+        for section in parser.sections()
+    }
 
-	if not "size" in CONFIG.options("common"):
-		print("'size' missing in [common]")
-		sys.exit()
+    for k in ["internal", "chassis", "board", "product", "multirecord"]:
+        config["common"].setdefault(k, "0")
+        if config["common"][k] == "1" and k not in config:
+            print("Skipping '%s = 1' - [%s] section missing" % (k, k))
+            config["common"][k] = "0"
+        elif config["common"][k] != "1" and k in config:
+            print("Skipping [%s] section - %s != 1" % (k, k))
+            del(config[k])
 
-	for i in ["internal", "chassis", "board", "product", "multirecord"]:
-		if i in CONFIG.options("common") and CONFIG.get("common", i) == "1":
-			if not i in CONFIG.sections():
-				print("Skipping '%s = 1' - [%s] section missing" % (i, i))
-				CONFIG.set("common", i, "0")
+    return config
 
-def make_fru():
-	internal_offset = 0
-	chassis_offset = 0
-	board_offset = 0
-	product_offset = 0
-	multirecord_offset = 0
-	
-	chassis = make_chassis()
-	board = make_board()
-	product = make_product()
-	internal = make_internal()
 
-	pos = 1
-	if len(chassis):
-		chassis_offset = pos
-		pos += int(len(chassis) / 8)
-	if len(board):
-		board_offset = pos
-		pos += int(len(board) / 8)
-	if len(product):
-		product_offset = pos
-		pos += int(len(product) / 8)
-	if len(internal):
-		internal_offset = pos
-	
-	# Header
-	out = struct.pack("BBBBBBB",
-		VERSION,
-		internal_offset,
-		chassis_offset,
-		board_offset,
-		product_offset,
-		multirecord_offset,
-		0x00)
-	
-	# Checksum
-	out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
-	
-	pad = bytes()
-	while len(out + chassis + board + product + internal + pad) < int(CONFIG.get("common", "size")):
-		pad += struct.pack("B", 0)
+def make_fru(config):
+    if "common" not in config:
+        raise ValueError("[common] section missing in config")
 
-	if len(out + chassis + board + product + internal + pad) > int(CONFIG.get("common", "size")):
-		print("Too much content, does not fit")
-		sys.exit()
+    if "version" not in config["common"]:
+        raise ValueError("'version' missing in [common]")
 
-	return out + chassis + board + product + internal + pad
+    if "size" not in config["common"]:
+        raise ValueError("'size' missing in [common]")
 
-def make_internal():
-	out = bytes()
-	if "internal" in CONFIG.options("common") and CONFIG.get("common", "internal") == "1":
-		# Data
-		if "data" in CONFIG.options("internal") and CONFIG.get("internal", "data") != "":
-			value = CONFIG.get("internal", "data")
-			out += struct.pack("B%ds" % len(value), VERSION, bytes(value, "ascii"))
-			print("Adding internal data")
-		elif "file" in CONFIG.options("internal") and CONFIG.get("internal", "file") != "":
-			try:
-				value = open(CONFIG.get("internal", "file"), "r").read()
-				try:
-					value = bytes(value, "ascii")
-				except:
-					pass
-				out += struct.pack("B%ds" % len(value), VERSION, value)
-				print("Adding internal file")
-			except:
-				print("Skipping [internal] file %s - missing" % CONFIG.get("internal", "file"))
-	return out
+    internal_offset = 0
+    chassis_offset = 0
+    board_offset = 0
+    product_offset = 0
+    multirecord_offset = 0
 
-def make_chassis():
-	out = bytes()
-	if "chassis" in CONFIG.options("common") and CONFIG.get("common", "chassis") == "1":
-		# Type
-		if "type" in CONFIG.options("chassis") and CONFIG.get("chassis", "type") != "":
-			out += struct.pack("B", int(CONFIG.get("chassis", "type"), 16))
-		else:
-			out += struct.pack("B", 0)
-		
-		# Strings
-		fields = ["part", "serial"]
-		fields.extend(EXTRAS)
-		offset = 0
-		print("[Chassis]")
-		for i in fields:
-			if i in CONFIG.options("chassis") and CONFIG.get("chassis", i) != "":
-				value = CONFIG.get("chassis", i).strip('"')
-				try:
-					value = bytes(value, "ascii")
-				except:
-					pass
-				out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
-				if "--cmd" in sys.argv:
-					print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field c %d %s" % (offset, dummystr(len(value))))
-				print("%d: %s = %s (%d)" % (offset, i, value, len(value)))
-				offset += 1
-			elif i not in EXTRAS:
-				out += struct.pack("B", 0)
-				offset += 1
-		print()
+    chassis = bytes()
+    board = bytes()
+    product = bytes()
+    internal = bytes()
 
-		# No more fields
-		out += struct.pack("B", 0xC1)
-		
-		# Padding
-		while len(out) % 8 != 5:
-			out += struct.pack("B", 0)
+    if "chassis" in config:
+        chassis = make_chassis(config)
+    if "board" in config:
+        board = make_board(config)
+    if "product" in config:
+        product = make_product(config)
+    if "internal" in config:
+        internal = make_internal(config)
 
-		# Header version and length in bytes
-		out = struct.pack("BB", VERSION, int((len(out)+3)/8)) + out
+    pos = 1
+    if len(chassis):
+        chassis_offset = pos
+        pos += int(len(chassis) / 8)
+    if len(board):
+        board_offset = pos
+        pos += int(len(board) / 8)
+    if len(product):
+        product_offset = pos
+        pos += int(len(product) / 8)
+    if len(internal):
+        internal_offset = pos
 
-		# Checksum
-		out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
+    # Header
+    out = struct.pack(
+        "BBBBBBB",
+        int(config["common"].get("version", "1")),
+        internal_offset,
+        chassis_offset,
+        board_offset,
+        product_offset,
+        multirecord_offset,
+        0x00
+    )
 
-	return out
+    # Checksum
+    out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
 
-def make_board():
-	out = bytes()
-	if "board" in CONFIG.options("common") and CONFIG.get("common", "board") == "1":
-		# Language
-		if "language" in CONFIG.options("board") and CONFIG.get("board", "language") != "":
-			out += struct.pack("B", int(CONFIG.get("board", "language"), 16))
-		else:
-			out += struct.pack("B", 0)
+    pad = bytes()
+    while len(out + chassis + board + product + internal + pad) < int(config["common"]["size"]):
+        pad += struct.pack("B", 0)
 
-		# Date
-		if "date" in CONFIG.options("board") and CONFIG.get("board", "date") != "":
-			date = int(CONFIG.get("board", "date"), 16)
-			out += struct.pack("BBB", date & 0xFF, (date & 0xFF00) >> 8, (date & 0xFF0000) >> 16)
-		else:
-			out += struct.pack("BBB", 0, 0, 0)
-		
-		# Strings
-		fields = ["manufacturer", "product", "serial", "part", "fileid"]
-		fields.extend(EXTRAS)
-		offset = 0
-		print("[Board]")
-		for i in fields:
-			if i in CONFIG.options("board") and CONFIG.get("board", i) != "":
-				value = CONFIG.get("board", i).strip('"')
-				try:
-					value = bytes(value, "ascii")
-				except:
-					pass
-				out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
-				if "--cmd" in sys.argv:
-					print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field b %d %s" % (offset, dummystr(len(value))))
-				print("%d: %s = %s (%d)" % (offset, i, value, len(value)))
-				offset += 1
-			elif i not in EXTRAS:
-				out += struct.pack("B", 0)
-				offset += 1
-		print()
+    if len(out + chassis + board + product + internal + pad) > int(config["common"]["size"]):
+        raise ValueError("Too much content, does not fit")
 
-		# No more fields
-		out += struct.pack("B", 0xC1)
-		
-		# Padding
-		while len(out) % 8 != 5:
-			out += struct.pack("B", 0)
+    return out + chassis + board + product + internal + pad
 
-		# Header version and length in bytes
-		out = struct.pack("BB", VERSION, int((len(out)+3)/8)) + out
 
-		# Checksum
-		out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
+def make_internal(config):
+    out = bytes()
 
-	return out
+    # Data
+    if config["internal"].get("data"):
+        value = config["internal"]["data"]
+        try:
+            value = bytes(value, "ascii")
+        except TypeError:
+            pass
+        out += struct.pack("B%ds" % len(value), int(config["common"].get("version", "1")), value)
+        print("Adding internal data")
+    elif config["internal"].get("file"):
+        try:
+            value = open(config["internal"]["file"], "r").read()
+            try:
+                value = bytes(value, "ascii")
+            except TypeError:
+                pass
+            out += struct.pack("B%ds" % len(value), int(config["common"].get("version", "1")), value)
+            print("Adding internal file")
+        except (configparser.NoSectionError, configparser.NoOptionError, IOError):
+            print("Skipping [internal] file %s - missing" % config["internal"]["file"])
+    return out
 
-def make_product():
-	out = bytes()
-	if "product" in CONFIG.options("common") and CONFIG.get("common", "product") == "1":
-		# Language
-		if "language" in CONFIG.options("product") and CONFIG.get("product", "language") != "":
-			out += struct.pack("B", int(CONFIG.get("product", "language"), 16))
-		else:
-			out += struct.pack("B", 0)
 
-		# Strings
-		fields = ["manufacturer", "product", "part", "version", "serial", "asset", "fileid"]
-		fields.extend(EXTRAS)
-		offset = 0
-		print("[Product]")
-		for i in fields:
-			if i in CONFIG.options("product") and CONFIG.get("product", i) != "":
-				value = CONFIG.get("product", i).strip('"')
-				try:
-					value = bytes(value, "ascii")
-				except:
-					pass
-				out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
-				if "--cmd" in sys.argv:
-					print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field p %d %s" % (offset, dummystr(len(value))))
-				print("%d: %s = %s (%d)" % (offset, i, value, len(value)))
-				offset += 1
-			elif i not in EXTRAS:
-				out += struct.pack("B", 0)
-				offset += 1
-		print()
+def make_chassis(config):
+    out = bytes()
 
-		# No more fields
-		out += struct.pack("B", 0xC1)
-		
-		# Padding
-		while len(out) % 8 != 5:
-			out += struct.pack("B", 0)
+    # Type
+    out += struct.pack("B", int(config["chassis"].get("type", "0"), 16))
 
-		# Header version and length in bytes
-		out = struct.pack("BB", VERSION, int((len(out)+3)/8)) + out
+    # Strings
+    fields = ["part", "serial"]
+    fields.extend(EXTRAS)
+    offset = 0
+    print("[Chassis]")
+    for k in fields:
+        if config["chassis"].get(k):
+            value = config["chassis"][k]
+            try:
+                value = bytes(value, "ascii")
+            except TypeError:
+                pass
+            out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
+            if "--cmd" in sys.argv:
+                print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field c %d %s" % (offset, dummystr(len(value))))
+            print("%d: %s = %s (%d)" % (offset, k, value, len(value)))
+            offset += 1
+        elif k not in EXTRAS:
+            out += struct.pack("B", 0)
+            offset += 1
+    print()
 
-		# Checksum
-		out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
+    # No more fields
+    out += struct.pack("B", 0xC1)
 
-	return out
+    # Padding
+    while len(out) % 8 != 5:
+        out += struct.pack("B", 0)
 
-if __name__ == "__main__":
-	if len(sys.argv) < 3:
-		print("fru.py fru.ini fru.bin [--force][--cmd]")
-		sys.exit()
-	
-	if not os.path.exists(sys.argv[1]):
-		print("Missing INI file %s" % sys.argv[1])
-		sys.exit()
-	
-	if os.path.exists(sys.argv[2]) and not "--force" in sys.argv:
-		print("BIN file %s exists" % sys.argv[2])
-		sys.exit()
+    # Header version and length in bytes
+    out = struct.pack("BB", int(config["common"].get("version", "1")), int((len(out)+3)/8)) + out
 
-	read_config(sys.argv[1])
-	out = make_fru()
-	f = open(sys.argv[2], "wb").write(out)
+    # Checksum
+    out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
+
+    return out
+
+
+def make_board(config):
+    out = bytes()
+
+    # Language
+    out += struct.pack("B", int(config["board"].get("language", "0"), 16))
+
+    # Date
+    date = int(config["board"].get("date", "0"), 16)
+    out += struct.pack("BBB", date & 0xFF, (date & 0xFF00) >> 8, (date & 0xFF0000) >> 16)
+
+    # Strings
+    fields = ["manufacturer", "product", "serial", "part", "fileid"]
+    fields.extend(EXTRAS)
+    offset = 0
+    print("[Board]")
+    for k in fields:
+        if config["board"].get(k):
+            value = config["board"][k]
+            try:
+                value = bytes(value, "ascii")
+            except TypeError:
+                pass
+            out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
+            if "--cmd" in sys.argv:
+                print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field b %d %s" % (offset, dummystr(len(value))))
+            print("%d: %s = %s (%d)" % (offset, k, value, len(value)))
+            offset += 1
+        elif k not in EXTRAS:
+            out += struct.pack("B", 0)
+            offset += 1
+    print()
+
+    # No more fields
+    out += struct.pack("B", 0xC1)
+
+    # Padding
+    while len(out) % 8 != 5:
+        out += struct.pack("B", 0)
+
+    # Header version and length in bytes
+    out = struct.pack("BB", int(config["common"].get("version", "1")), int((len(out)+3)/8)) + out
+
+    # Checksum
+    out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
+
+    return out
+
+
+def make_product(config):
+    out = bytes()
+
+    # Language
+    out += struct.pack("B", int(config["product"].get("language", "0"), 16))
+
+    # Strings
+    fields = ["manufacturer", "product", "part", "version", "serial", "asset", "fileid"]
+    fields.extend(EXTRAS)
+    offset = 0
+    print("[Product]")
+    for k in fields:
+        if config["product"].get(k):
+            value = config["product"][k]
+            try:
+                value = bytes(value, "ascii")
+            except TypeError:
+                pass
+            out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
+            if "--cmd" in sys.argv:
+                print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field p %d %s" % (offset, dummystr(len(value))))
+            print("%d: %s = %s (%d)" % (offset, k, value, len(value)))
+            offset += 1
+        elif k not in EXTRAS:
+            out += struct.pack("B", 0)
+            offset += 1
+    print()
+
+    # No more fields
+    out += struct.pack("B", 0xC1)
+
+    # Padding
+    while len(out) % 8 != 5:
+        out += struct.pack("B", 0)
+
+    # Header version and length in bytes
+    out = struct.pack("BB", int(config["common"].get("version", "1")), int((len(out)+3)/8)) + out
+
+    # Checksum
+    out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
+
+    return out
+
+
+def run(ini_file, bin_file):  # pragma: nocover
+    try:
+        configuration = read_config(ini_file)
+        blob = make_fru(configuration)
+    except ValueError as error:
+        print(error.message)
+    else:
+        open(bin_file, "wb").write(blob)
+
+
+if __name__ == "__main__":  # pragma: nocover
+    if len(sys.argv) < 3:
+        print("fru.py input.ini output.bin [--force] [--cmd]")
+        sys.exit()
+
+    if not os.path.exists(sys.argv[1]):
+        print("Missing INI file %s" % sys.argv[1])
+        sys.exit()
+
+    if os.path.exists(sys.argv[2]) and "--force" not in sys.argv:
+        print("BIN file %s exists" % sys.argv[2])
+        sys.exit()
+
+    run(sys.argv[1], sys.argv[2])
