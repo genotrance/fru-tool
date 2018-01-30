@@ -73,4 +73,3 @@ def test_skipped_section():
     path = os.path.join(os.path.dirname(__file__), 'skip-section.ini')
     config = fru.read_config(path)
     assert "internal" not in config
-    assert config["common"]["internal"] == "0"
