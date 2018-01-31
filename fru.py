@@ -6,6 +6,7 @@
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
 
+from __future__ import division
 from __future__ import unicode_literals
 
 import itertools
@@ -238,13 +239,13 @@ def make_fru(config):
     pos = 1
     if len(chassis):
         chassis_offset = pos
-        pos += int(len(chassis) / 8)
+        pos += len(chassis) // 8
     if len(board):
         board_offset = pos
-        pos += int(len(board) / 8)
+        pos += len(board) // 8
     if len(product):
         product_offset = pos
-        pos += int(len(product) / 8)
+        pos += len(product) // 8
     if len(internal):
         internal_offset = pos
 
@@ -323,7 +324,7 @@ def make_chassis(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", config["common"].get("version", 1), int((len(out)+3)/8)) + out
+    out = struct.pack("BB", config["common"].get("version", 1), (len(out)+3) // 8) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
@@ -367,7 +368,7 @@ def make_board(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", config["common"].get("version", 1), int((len(out)+3)/8)) + out
+    out = struct.pack("BB", config["common"].get("version", 1), (len(out)+3) // 8) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
@@ -407,7 +408,7 @@ def make_product(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", config["common"].get("version", 1), int((len(out)+3)/8)) + out
+    out = struct.pack("BB", config["common"].get("version", 1), (len(out)+3) // 8) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
