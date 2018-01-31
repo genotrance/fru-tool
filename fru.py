@@ -19,6 +19,11 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
 
 __version__ = "1.0"
 
@@ -97,9 +102,11 @@ def validate_checksum(blob, offset):
     :type offset: int
     """
 
-    length = ord(blob[offset + 1]) * 8
-    checksum = ord(blob[offset + length - 1])
-    data_sum = sum(ord(c) for c in blob[offset:offset + length - 1]) & 0xff
+    length = ord(blob[offset + 1:offset + 2]) * 8
+    checksum = ord(blob[offset + length - 1:offset + length])
+    data_sum = 0xff & sum(
+        struct.unpack("%dB" % (length - 1), blob[offset:offset + length - 1])
+    )
     if data_sum + checksum != 0x100:
         raise ValueError('The data does not match its checksum.')
 
@@ -121,11 +128,11 @@ def extract_values(blob, offset, names):
 
     extra_names = ('extra{}'.format(i) for i in itertools.count(1))
     for name in itertools.chain(names, extra_names):
-        type_length = ord(blob[offset])
+        type_length = ord(blob[offset:offset + 1])
         if type_length == 0xc1:
             return data
         length = type_length & 0x3f
-        # encoding = (ord(blob[offset]) & 0xc0) >> 6
+        # encoding = (ord(blob[offset:offset + 1]) & 0xc0) >> 6
         data[name] = blob[offset + 1:offset + length + 1].decode('ascii')
         offset += length + 1
 
@@ -149,29 +156,30 @@ def load_bin(path=None, blob=None):
         with open(path, 'rb') as f:
             blob = f.read()
 
-    checksum = ord(blob[7])
-    data_checksum = sum(ord(c) for c in blob[:7])
+    checksum = ord(blob[7:8])
+    data_checksum = sum(struct.unpack("7B", blob[:7]))
     if checksum + data_checksum != 0x100:
         raise ValueError('The header checksum does not match the header data.')
 
-    version = ord(blob[0])
-    internal_offset = ord(blob[1]) * 8
-    chassis_offset = ord(blob[2]) * 8
-    board_offset = ord(blob[3]) * 8
-    product_offset = ord(blob[4]) * 8
-    # multirecord_offset = ord(blob[5]) * 8
+    version = ord(blob[0:1])
+    internal_offset = ord(blob[1:2]) * 8
+    chassis_offset = ord(blob[2:3]) * 8
+    board_offset = ord(blob[3:4]) * 8
+    product_offset = ord(blob[4:5]) * 8
+    # multirecord_offset = ord(blob[5:6]) * 8
 
     data = {'common': {'version': version, 'size': len(blob)}}
 
     if internal_offset:
-        # Not implemented.
-        pass
+        next_offset = chassis_offset or board_offset or product_offset
+        internal_blob = blob[internal_offset + 1:next_offset or len(blob)]
+        data['internal'] = {'data': internal_blob}
 
     if chassis_offset:
         validate_checksum(blob, chassis_offset)
 
         data['chassis'] = {
-            'type': ord(blob[chassis_offset + 2]),
+            'type': ord(blob[chassis_offset + 2:chassis_offset + 3]),
         }
         names = ['part', 'serial']
         data['chassis'].update(extract_values(blob, chassis_offset + 3, names))
@@ -180,12 +188,11 @@ def load_bin(path=None, blob=None):
         validate_checksum(blob, board_offset)
 
         data['board'] = {
-            'version': ord(blob[board_offset]),
-            'language': ord(blob[board_offset+2]),
+            'language': ord(blob[board_offset + 2:board_offset + 3]),
             'date': sum([
-                ord(blob[board_offset + 3]),
-                ord(blob[board_offset + 4]) << 8,
-                ord(blob[board_offset + 5]) << 16,
+                ord(blob[board_offset + 3:board_offset + 4]),
+                ord(blob[board_offset + 4:board_offset + 5]) << 8,
+                ord(blob[board_offset + 5:board_offset + 6]) << 16,
             ]),
         }
         names = ['manufacturer', 'product', 'serial', 'part', 'fileid']
@@ -195,7 +202,7 @@ def load_bin(path=None, blob=None):
         validate_checksum(blob, product_offset)
 
         data['product'] = {
-            'language': ord(blob[product_offset + 2]),
+            'language': ord(blob[product_offset + 2:product_offset + 3]),
         }
         names = [
             'manufacturer', 'product', 'part', 'version',
