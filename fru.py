@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 # fru.py - Generate a binary IPMI FRU data file.
 # Copyright (c) 2017 Dell Technologies
+# Copyright (c) 2018 Kurt McKee <contactme@kurtmckee.org>
 #
 # https://github.com/genotrance/fru-tool/
 #
@@ -99,7 +101,7 @@ def read_config(path):
         try:
             with open(internal_file, 'rb') as f:
                 config['internal']['data'] = f.read()
-        except (FileNotFoundError, IOError):
+        except FileNotFoundError:
             message = 'Internal info area file {} not found.'
             raise ValueError(message.format(internal_file))
     if 'file' in config.get('internal', {}):

@@ -1,4 +1,13 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
+# Tests for fru.py
+# Copyright (c) 2017 Dell Technologies
+# Copyright (c) 2018 Kurt McKee <contactme@kurtmckee.org>
+#
+# https://github.com/genotrance/fru-tool/
+#
+# Licensed under the terms of the MIT License:
+# https://opensource.org/licenses/MIT
+
 
 from __future__ import absolute_import
 from __future__ import division
@@ -66,12 +75,32 @@ def test_missing_required_elements():
     with pytest.raises(ValueError):
         fru.make_fru({})
     with pytest.raises(ValueError):
-        fru.make_fru({"common": {"size": "512"}})
+        fru.make_fru({"common": {"size": 512}})
     with pytest.raises(ValueError):
-        fru.make_fru({"common": {"version": "1"}})
+        fru.make_fru({"common": {"version": 1}})
 
 
 def test_skipped_section():
     path = os.path.join(os.path.dirname(__file__), 'skip-section.ini')
     config = fru.read_config(path)
     assert "internal" not in config
+
+
+def test_load_bin_bad_calls():
+    with pytest.raises(ValueError):
+        fru.load_bin()
+    with pytest.raises(ValueError):
+        fru.load_bin(path='a', blob='a'.encode('ascii'))
+
+
+def test_bad_header_checksum():
+    blob = b"\x01\x00\x00\x00\x00\x00\x00\x00"
+    with pytest.raises(ValueError):
+        fru.load_bin(blob=blob)
+
+
+def test_internal_fru_file_not_found():
+    path = os.path.join(os.path.dirname(__file__), 'internal-fru-file-not-found.ini')
+    with pytest.raises(ValueError) as error:
+        fru.read_config(path)
+        assert 'not found' in error.msg
