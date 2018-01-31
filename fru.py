@@ -89,6 +89,24 @@ def read_config(path):
         if keys[0] in config and keys[1] in config[keys[0]]:
             config[keys[0]][keys[1]] = int(config[keys[0]][keys[1]], 16)
 
+    # Normalize the internal info area data.
+    if config.get('internal', {}).get('data'):
+        config['internal']['data'] = config['internal']['data'].encode('utf8')
+    elif config.get('internal', {}).get('file'):
+        internal_file = os.path.join(
+            os.path.dirname(path), config['internal']['file']
+        )
+        try:
+            with open(internal_file, 'rb') as f:
+                config['internal']['data'] = f.read()
+        except (FileNotFoundError, IOError):
+            message = 'Internal info area file {} not found.'
+            raise ValueError(message.format(internal_file))
+    if 'file' in config.get('internal', {}):
+        del(config['internal']['file'])
+    if 'internal' in config and not config['internal'].get('data'):
+        del(config['internal']['data'])
+
     return config
 
 
@@ -229,21 +247,24 @@ def make_fru(config):
     product_offset = 0
     multirecord_offset = 0
 
+    internal = bytes()
     chassis = bytes()
     board = bytes()
     product = bytes()
-    internal = bytes()
 
+    if config.get('internal', {}).get('data'):
+        internal = make_internal(config)
     if "chassis" in config:
         chassis = make_chassis(config)
     if "board" in config:
         board = make_board(config)
     if "product" in config:
         product = make_product(config)
-    if "internal" in config:
-        internal = make_internal(config)
 
     pos = 1
+    if len(internal):
+        internal_offset = pos
+        pos += len(internal) // 8
     if len(chassis):
         chassis_offset = pos
         pos += len(chassis) // 8
@@ -252,9 +273,6 @@ def make_fru(config):
         pos += len(board) // 8
     if len(product):
         product_offset = pos
-        pos += len(product) // 8
-    if len(internal):
-        internal_offset = pos
 
     # Header
     out = struct.pack(
@@ -272,30 +290,22 @@ def make_fru(config):
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
 
     pad = bytes()
-    while len(out + chassis + board + product + internal + pad) < config["common"]["size"]:
+    while len(out + internal + chassis + board + product + pad) < config["common"]["size"]:
         pad += struct.pack("B", 0)
 
-    if len(out + chassis + board + product + internal + pad) > config["common"]["size"]:
+    if len(out + internal + chassis + board + product + pad) > config["common"]["size"]:
         raise ValueError("Too much content, does not fit")
 
-    return out + chassis + board + product + internal + pad
+    return out + internal + chassis + board + product + pad
 
 
 def make_internal(config):
     out = bytes()
 
     # Data
-    if config["internal"].get("data"):
-        value = config["internal"]["data"].encode('ascii')
-        out += struct.pack("B%ds" % len(value), config["common"].get("version", 1), value)
-        print("Adding internal data")
-    elif config["internal"].get("file"):
-        try:
-            value = open(config["internal"]["file"], "rb").read()
-            out += struct.pack("B%ds" % len(value), config["common"].get("version", 1), value)
-            print("Adding internal file")
-        except (configparser.NoSectionError, configparser.NoOptionError, IOError):
-            print("Skipping [internal] file %s - missing" % config["internal"]["file"])
+    value = config["internal"]["data"]
+    out += struct.pack("B%ds" % len(value), config["common"].get("version", 1), value)
+    print("Adding internal data")
     return out
 
 
