@@ -39,7 +39,7 @@ def test_one_parsed_section(name):
 def test_too_much_data():
     config = {
         "common": {"version": 1, "size": 20},
-        "chassis": {"part": "a".encode("ascii") * 250},
+        "chassis": {"part": "a" * 250},
     }
     with pytest.raises(ValueError):
         fru.make_fru(config)
@@ -50,10 +50,6 @@ def test_empty_everything():
         "common": {
             "version": 1,
             "size": 256,
-            "internal": 1,
-            "chassis": 1,
-            "board": 1,
-            "product": 1,
         },
         "internal": {}, "chassis": {}, "board": {}, "product": {},
     }

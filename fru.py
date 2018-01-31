@@ -6,6 +6,8 @@
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
 
+from __future__ import unicode_literals
+
 import itertools
 import os
 import struct
@@ -33,13 +35,22 @@ def read_config(path):
     parser = configparser.ConfigParser()
     parser.read(path)
 
-    config = {
-        section: {
-            option: parser.get(section, option).strip('"')
-            for option in parser.options(section)
+    try:
+        config = {
+            section.decode('ascii'): {
+                option.decode('ascii'): parser.get(section, option).strip('"')
+                for option in parser.options(section)
+            }
+            for section in parser.sections()
         }
-        for section in parser.sections()
-    }
+    except AttributeError:
+        config = {
+            section: {
+                option: parser.get(section, option).strip('"')
+                for option in parser.options(section)
+            }
+            for section in parser.sections()
+        }
 
     integers = [
         ('common', 'size'),
@@ -240,7 +251,7 @@ def make_fru(config):
     # Header
     out = struct.pack(
         "BBBBBBB",
-        int(config["common"].get("version", "1")),
+        config["common"].get("version", 1),
         internal_offset,
         chassis_offset,
         board_offset,
@@ -253,10 +264,10 @@ def make_fru(config):
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
 
     pad = bytes()
-    while len(out + chassis + board + product + internal + pad) < int(config["common"]["size"]):
+    while len(out + chassis + board + product + internal + pad) < config["common"]["size"]:
         pad += struct.pack("B", 0)
 
-    if len(out + chassis + board + product + internal + pad) > int(config["common"]["size"]):
+    if len(out + chassis + board + product + internal + pad) > config["common"]["size"]:
         raise ValueError("Too much content, does not fit")
 
     return out + chassis + board + product + internal + pad
@@ -267,21 +278,13 @@ def make_internal(config):
 
     # Data
     if config["internal"].get("data"):
-        value = config["internal"]["data"]
-        try:
-            value = bytes(value, "ascii")
-        except TypeError:
-            pass
-        out += struct.pack("B%ds".encode('ascii') % len(value), int(config["common"].get("version", "1")), value.encode('ascii'))
+        value = config["internal"]["data"].encode('ascii')
+        out += struct.pack("B%ds" % len(value), config["common"].get("version", 1), value)
         print("Adding internal data")
     elif config["internal"].get("file"):
         try:
-            value = open(config["internal"]["file"], "r").read()
-            try:
-                value = bytes(value, "ascii")
-            except TypeError:
-                pass
-            out += struct.pack("B%ds" % len(value), int(config["common"].get("version", "1")), value)
+            value = open(config["internal"]["file"], "rb").read()
+            out += struct.pack("B%ds" % len(value), config["common"].get("version", 1), value)
             print("Adding internal file")
         except (configparser.NoSectionError, configparser.NoOptionError, IOError):
             print("Skipping [internal] file %s - missing" % config["internal"]["file"])
@@ -301,12 +304,8 @@ def make_chassis(config):
     print("[Chassis]")
     for k in fields:
         if config["chassis"].get(k):
-            value = config["chassis"][k]
-            try:
-                value = bytes(value, "ascii")
-            except TypeError:
-                pass
-            out += struct.pack("B%ds".encode('ascii') % len(value), len(value) | 0xC0, value.encode('ascii'))
+            value = config["chassis"][k].encode('ascii')
+            out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
             if "--cmd" in sys.argv:
                 print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field c %d %s" % (offset, dummystr(len(value))))
             print("%d: %s = %s (%d)" % (offset, k, value, len(value)))
@@ -324,7 +323,7 @@ def make_chassis(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", int(config["common"].get("version", "1")), int((len(out)+3)/8)) + out
+    out = struct.pack("BB", config["common"].get("version", 1), int((len(out)+3)/8)) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
@@ -349,12 +348,8 @@ def make_board(config):
     print("[Board]")
     for k in fields:
         if config["board"].get(k):
-            value = config["board"][k]
-            try:
-                value = bytes(value, "ascii")
-            except TypeError:
-                pass
-            out += struct.pack("B%ds".encode('ascii') % len(value), len(value) | 0xC0, value.encode('ascii'))
+            value = config["board"][k].encode('ascii')
+            out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
             if "--cmd" in sys.argv:
                 print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field b %d %s" % (offset, dummystr(len(value))))
             print("%d: %s = %s (%d)" % (offset, k, value, len(value)))
@@ -372,7 +367,7 @@ def make_board(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", int(config["common"].get("version", "1")), int((len(out)+3)/8)) + out
+    out = struct.pack("BB", config["common"].get("version", 1), int((len(out)+3)/8)) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
@@ -393,12 +388,8 @@ def make_product(config):
     print("[Product]")
     for k in fields:
         if config["product"].get(k):
-            value = config["product"][k]
-            try:
-                value = bytes(value, "ascii")
-            except TypeError:
-                pass
-            out += struct.pack("B%ds".encode('ascii') % len(value), len(value) | 0xC0, value.encode('ascii'))
+            value = config["product"][k].encode('ascii')
+            out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
             if "--cmd" in sys.argv:
                 print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field p %d %s" % (offset, dummystr(len(value))))
             print("%d: %s = %s (%d)" % (offset, k, value, len(value)))
@@ -416,7 +407,7 @@ def make_product(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", int(config["common"].get("version", "1")), int((len(out)+3)/8)) + out
+    out = struct.pack("BB", config["common"].get("version", 1), int((len(out)+3)/8)) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
