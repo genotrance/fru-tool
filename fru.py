@@ -32,13 +32,6 @@ __version__ = "1.0"
 EXTRAS = ["extra1", "extra2", "extra3", "extra4", "extra5", "extra6", "extra7", "extra8", "extra9"]
 
 
-def dummystr(length):
-    out = "1234567890"
-    while len(out) < length:
-        out += "1234567890"
-    return out[:length]
-
-
 def read_config(path):
     parser = configparser.ConfigParser()
     parser.read(path)
@@ -72,24 +65,19 @@ def read_config(path):
         ('product', 'language'),
     ]
 
-    for k in ["internal", "chassis", "board", "product", "multirecord"]:
-        config["common"].setdefault(k, "0")
-        if config["common"][k] == "1" and k not in config:
-            print("Skipping '%s = 1' - [%s] section missing" % (k, k))
-            config["common"][k] = "0"
-        elif config["common"][k] != "1" and k in config:
-            print("Skipping [%s] section - %s != 1" % (k, k))
-            del(config[k])
-        if k in config["common"]:
-            del(config["common"][k])
+    for section in ["internal", "chassis", "board", "product", "multirecord"]:
+        if config["common"].get(section, "0") != "1" and section in config:
+            del(config[section])
+        if section in config["common"]:
+            del(config["common"][section])
 
-    for keys in integers:
-        if keys[0] in config and keys[1] in config[keys[0]]:
-            config[keys[0]][keys[1]] = int(config[keys[0]][keys[1]])
+    for section, option in integers:
+        if section in config and option in config[section]:  # pragma: nobranch
+            config[section][option] = int(config[section][option])
 
-    for keys in hex_integers:
-        if keys[0] in config and keys[1] in config[keys[0]]:
-            config[keys[0]][keys[1]] = int(config[keys[0]][keys[1]], 16)
+    for section, option in hex_integers:
+        if section in config and option in config[section]:
+            config[section][option] = int(config[section][option], 16)
 
     # Normalize the internal info area data.
     if config.get('internal', {}).get('data'):
@@ -107,12 +95,12 @@ def read_config(path):
     if 'file' in config.get('internal', {}):
         del(config['internal']['file'])
     if 'internal' in config and not config['internal'].get('data'):
-        del(config['internal']['data'])
+        del(config['internal'])
 
     return config
 
 
-def validate_checksum(blob, offset):
+def validate_checksum(blob, offset, length):
     """Validate a chassis, board, or product checksum.
 
     *blob is the binary data blob, and *offset* is the integer offset that
@@ -120,9 +108,9 @@ def validate_checksum(blob, offset):
 
     :type blob: bytes
     :type offset: int
+    :type length: int
     """
 
-    length = ord(blob[offset + 1:offset + 2]) * 8
     checksum = ord(blob[offset + length - 1:offset + length])
     data_sum = 0xff & sum(
         struct.unpack("%dB" % (length - 1), blob[offset:offset + length - 1])
@@ -146,8 +134,8 @@ def extract_values(blob, offset, names):
 
     data = {}
 
-    extra_names = ('extra{}'.format(i) for i in itertools.count(1))
-    for name in itertools.chain(names, extra_names):
+    extras = ('extra%d' % i for i in itertools.count(1))  # pragma: nobranch
+    for name in itertools.chain(names, extras):  # pragma: nobranch
         type_length = ord(blob[offset:offset + 1])
         if type_length == 0xc1:
             return data
@@ -176,10 +164,7 @@ def load_bin(path=None, blob=None):
         with open(path, 'rb') as f:
             blob = f.read()
 
-    checksum = ord(blob[7:8])
-    data_checksum = sum(struct.unpack("7B", blob[:7]))
-    if checksum + data_checksum != 0x100:
-        raise ValueError('The header checksum does not match the header data.')
+    validate_checksum(blob, 0, 8)
 
     version = ord(blob[0:1])
     internal_offset = ord(blob[1:2]) * 8
@@ -196,7 +181,8 @@ def load_bin(path=None, blob=None):
         data['internal'] = {'data': internal_blob}
 
     if chassis_offset:
-        validate_checksum(blob, chassis_offset)
+        length = ord(blob[chassis_offset + 1:chassis_offset + 2]) * 8
+        validate_checksum(blob, chassis_offset, length)
 
         data['chassis'] = {
             'type': ord(blob[chassis_offset + 2:chassis_offset + 3]),
@@ -205,7 +191,8 @@ def load_bin(path=None, blob=None):
         data['chassis'].update(extract_values(blob, chassis_offset + 3, names))
 
     if board_offset:
-        validate_checksum(blob, board_offset)
+        length = ord(blob[board_offset + 1:board_offset + 2]) * 8
+        validate_checksum(blob, board_offset, length)
 
         data['board'] = {
             'language': ord(blob[board_offset + 2:board_offset + 3]),
@@ -219,7 +206,8 @@ def load_bin(path=None, blob=None):
         data['board'].update(extract_values(blob, board_offset + 6, names))
 
     if product_offset:
-        validate_checksum(blob, product_offset)
+        length = ord(blob[product_offset + 1:product_offset + 2]) * 8
+        validate_checksum(blob, product_offset, length)
 
         data['product'] = {
             'language': ord(blob[product_offset + 2:product_offset + 3]),
@@ -233,14 +221,14 @@ def load_bin(path=None, blob=None):
     return data
 
 
-def make_fru(config):
-    if "common" not in config:
+def make_fru(data):
+    if "common" not in data:
         raise ValueError("[common] section missing in config")
 
-    if "version" not in config["common"]:
+    if "version" not in data["common"]:
         raise ValueError("'version' missing in [common]")
 
-    if "size" not in config["common"]:
+    if "size" not in data["common"]:
         raise ValueError("'size' missing in [common]")
 
     internal_offset = 0
@@ -254,14 +242,14 @@ def make_fru(config):
     board = bytes()
     product = bytes()
 
-    if config.get('internal', {}).get('data'):
-        internal = make_internal(config)
-    if "chassis" in config:
-        chassis = make_chassis(config)
-    if "board" in config:
-        board = make_board(config)
-    if "product" in config:
-        product = make_product(config)
+    if data.get('internal', {}).get('data'):
+        internal = make_internal(data)
+    if "chassis" in data:
+        chassis = make_chassis(data)
+    if "board" in data:
+        board = make_board(data)
+    if "product" in data:
+        product = make_product(data)
 
     pos = 1
     if len(internal):
@@ -279,7 +267,7 @@ def make_fru(config):
     # Header
     out = struct.pack(
         "BBBBBBB",
-        config["common"].get("version", 1),
+        data["common"].get("version", 1),
         internal_offset,
         chassis_offset,
         board_offset,
@@ -291,24 +279,22 @@ def make_fru(config):
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
 
-    pad = bytes()
-    while len(out + internal + chassis + board + product + pad) < config["common"]["size"]:
-        pad += struct.pack("B", 0)
+    blob = out + internal + chassis + board + product
+    difference = data['common']['size'] - len(blob)
+    pad = struct.pack("B" * difference, *[0] * difference)
 
-    if len(out + internal + chassis + board + product + pad) > config["common"]["size"]:
+    if len(blob + pad) > data["common"]["size"]:
         raise ValueError("Too much content, does not fit")
 
-    return out + internal + chassis + board + product + pad
+    return blob + pad
 
 
-def make_internal(config):
-    out = bytes()
-
-    # Data
-    value = config["internal"]["data"]
-    out += struct.pack("B%ds" % len(value), config["common"].get("version", 1), value)
-    print("Adding internal data")
-    return out
+def make_internal(data):
+    return struct.pack(
+        "B%ds" % len(data["internal"]["data"]),
+        data["common"].get("version", 1),
+        data["internal"]["data"],
+    )
 
 
 def make_chassis(config):
@@ -321,19 +307,14 @@ def make_chassis(config):
     fields = ["part", "serial"]
     fields.extend(EXTRAS)
     offset = 0
-    print("[Chassis]")
     for k in fields:
         if config["chassis"].get(k):
             value = config["chassis"][k].encode('ascii')
             out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
-            if "--cmd" in sys.argv:
-                print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field c %d %s" % (offset, dummystr(len(value))))
-            print("%d: %s = %s (%d)" % (offset, k, value, len(value)))
             offset += 1
         elif k not in EXTRAS:
             out += struct.pack("B", 0)
             offset += 1
-    print()
 
     # No more fields
     out += struct.pack("B", 0xC1)
@@ -343,7 +324,11 @@ def make_chassis(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", config["common"].get("version", 1), (len(out)+3) // 8) + out
+    out = struct.pack(
+        "BB",
+        config["common"].get("version", 1),
+        (len(out) + 3) // 8,
+    ) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
@@ -359,25 +344,25 @@ def make_board(config):
 
     # Date
     date = config["board"].get("date", 0)
-    out += struct.pack("BBB", date & 0xFF, (date & 0xFF00) >> 8, (date & 0xFF0000) >> 16)
+    out += struct.pack(
+        "BBB",
+        (date & 0xFF),
+        (date & 0xFF00) >> 8,
+        (date & 0xFF0000) >> 16,
+    )
 
     # Strings
     fields = ["manufacturer", "product", "serial", "part", "fileid"]
     fields.extend(EXTRAS)
     offset = 0
-    print("[Board]")
     for k in fields:
         if config["board"].get(k):
             value = config["board"][k].encode('ascii')
             out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
-            if "--cmd" in sys.argv:
-                print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field b %d %s" % (offset, dummystr(len(value))))
-            print("%d: %s = %s (%d)" % (offset, k, value, len(value)))
             offset += 1
         elif k not in EXTRAS:
             out += struct.pack("B", 0)
             offset += 1
-    print()
 
     # No more fields
     out += struct.pack("B", 0xC1)
@@ -387,7 +372,11 @@ def make_board(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", config["common"].get("version", 1), (len(out)+3) // 8) + out
+    out = struct.pack(
+        "BB",
+        config["common"].get("version", 1),
+        (len(out)+3) // 8,
+    ) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
@@ -402,22 +391,20 @@ def make_product(config):
     out += struct.pack("B", config["product"].get("language", 0))
 
     # Strings
-    fields = ["manufacturer", "product", "part", "version", "serial", "asset", "fileid"]
+    fields = [
+        "manufacturer", "product", "part", "version", "serial", "asset",
+        "fileid",
+    ]
     fields.extend(EXTRAS)
     offset = 0
-    print("[Product]")
     for k in fields:
         if config["product"].get(k):
             value = config["product"][k].encode('ascii')
             out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
-            if "--cmd" in sys.argv:
-                print("; ipmitool -I lanplus -H %%IP%% -U root -P password fru edit 17 field p %d %s" % (offset, dummystr(len(value))))
-            print("%d: %s = %s (%d)" % (offset, k, value, len(value)))
             offset += 1
         elif k not in EXTRAS:
             out += struct.pack("B", 0)
             offset += 1
-    print()
 
     # No more fields
     out += struct.pack("B", 0xC1)
@@ -427,7 +414,11 @@ def make_product(config):
         out += struct.pack("B", 0)
 
     # Header version and length in bytes
-    out = struct.pack("BB", config["common"].get("version", 1), (len(out)+3) // 8) + out
+    out = struct.pack(
+        "BB",
+        config["common"].get("version", 1),
+        (len(out) + 3) // 8,
+    ) + out
 
     # Checksum
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)

@@ -8,7 +8,6 @@
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
 
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -100,7 +99,16 @@ def test_bad_header_checksum():
 
 
 def test_internal_fru_file_not_found():
-    path = os.path.join(os.path.dirname(__file__), 'internal-fru-file-not-found.ini')
+    path = os.path.join(
+        os.path.dirname(__file__),
+        'internal-fru-file-not-found.ini'
+    )
     with pytest.raises(ValueError) as error:
         fru.read_config(path)
         assert 'not found' in error.msg
+
+
+def test_internal_fru_requested_but_empty():
+    path = os.path.join(os.path.dirname(__file__), 'internal-empty.ini')
+    data = fru.read_config(path)
+    assert 'internal' not in data
