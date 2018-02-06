@@ -8,6 +8,7 @@
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
 
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
@@ -27,7 +28,7 @@ except NameError:
     FileNotFoundError = IOError
 
 
-__version__ = "1.0"
+__version__ = "2.0"
 
 EXTRAS = ["extra1", "extra2", "extra3", "extra4", "extra5", "extra6", "extra7", "extra8", "extra9"]
 
