@@ -113,10 +113,10 @@ def validate_checksum(blob, offset, length):
     """
 
     checksum = ord(blob[offset + length - 1:offset + length])
-    data_sum = 0xff & sum(
+    data_sum = sum(
         struct.unpack("%dB" % (length - 1), blob[offset:offset + length - 1])
     )
-    if data_sum + checksum != 0x100:
+    if 0xff & (data_sum + checksum) != 0:
         raise ValueError('The data does not match its checksum.')
 
 

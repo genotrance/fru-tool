@@ -112,3 +112,11 @@ def test_internal_fru_requested_but_empty():
     path = os.path.join(os.path.dirname(__file__), 'internal-empty.ini')
     data = fru.read_config(path)
     assert 'internal' not in data
+
+
+def test_checksum_of_zero():
+    path = os.path.join(
+        os.path.dirname(__file__),
+        'checksum-zero.bin'
+    )
+    fru.load_bin(path)
