@@ -130,7 +130,7 @@ def extract_values(blob, offset, names):
 
     :type blob: bytes
     :type offset: int
-    :type names: list[str]
+    :type names: list[union(str, unicode)]
     """
 
     data = {}
