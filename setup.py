@@ -12,7 +12,7 @@ def get_version():
     base = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(base, 'fru.py'), 'r') as f:
         blob = f.read()
-    return re.search(r'__version__ = "(.+)"', blob).group(1)
+    return re.search(r"__version__ = '(.+)'", blob).group(1)
 
 
 setup(
