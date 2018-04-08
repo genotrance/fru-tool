@@ -440,7 +440,8 @@ def run(ini_file, bin_file):  # pragma: nocover
     except ValueError as error:
         print(error.message)
     else:
-        open(bin_file, 'wb').write(blob)
+        with open(bin_file, 'wb') as f:
+            f.write(blob)
 
 
 if __name__ == '__main__':  # pragma: nocover
