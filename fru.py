@@ -152,7 +152,7 @@ def extract_values(blob, offset, names):
         offset += length + 1
 
 
-def load_bin(path=None, blob=None):
+def load(path=None, blob=None):
     """Load binary FRU information from a file or binary data blob.
 
     If *path* is provided, it will be read into memory. If *blob* is provided
@@ -228,7 +228,7 @@ def load_bin(path=None, blob=None):
     return data
 
 
-def make_fru(data):
+def dump(data):
     if 'common' not in data:
         raise ValueError('[common] section missing in config')
 
@@ -436,7 +436,7 @@ def make_product(config):
 def run(ini_file, bin_file):  # pragma: nocover
     try:
         configuration = read_config(ini_file)
-        blob = make_fru(configuration)
+        blob = dump(configuration)
     except ValueError as error:
         print(error.message)
     else:

@@ -31,7 +31,7 @@ sections = [
 def test_basic_ini_sections(name):
     path = os.path.join(os.path.dirname(__file__), 'basic-{}.ini'.format(name))
     config = fru.read_config(path)
-    actual = fru.make_fru(config)
+    actual = fru.dump(config)
 
     path = os.path.join(os.path.dirname(__file__), 'basic-{}.bin'.format(name))
     with open(path, 'rb') as f:
@@ -46,7 +46,7 @@ def test_identical_loading(name):
     ini_data = fru.read_config(path)
 
     path = os.path.join(os.path.dirname(__file__), 'basic-{}.bin'.format(name))
-    bin_data = fru.load_bin(path=path)
+    bin_data = fru.load(path=path)
 
     assert ini_data == bin_data
 
@@ -57,7 +57,7 @@ def test_too_much_data():
         "chassis": {"part": "a" * 250},
     }
     with pytest.raises(ValueError):
-        fru.make_fru(config)
+        fru.dump(config)
 
 
 def test_empty_everything():
@@ -68,16 +68,16 @@ def test_empty_everything():
         },
         "internal": {}, "chassis": {}, "board": {}, "product": {},
     }
-    fru.make_fru(config)
+    fru.dump(config)
 
 
 def test_missing_required_elements():
     with pytest.raises(ValueError):
-        fru.make_fru({})
+        fru.dump({})
     with pytest.raises(ValueError):
-        fru.make_fru({"common": {"size": 512}})
+        fru.dump({"common": {"size": 512}})
     with pytest.raises(ValueError):
-        fru.make_fru({"common": {"version": 1}})
+        fru.dump({"common": {"version": 1}})
 
 
 def test_skipped_section():
@@ -86,17 +86,17 @@ def test_skipped_section():
     assert "internal" not in config
 
 
-def test_load_bin_bad_calls():
+def test_load_bad_calls():
     with pytest.raises(ValueError):
-        fru.load_bin()
+        fru.load()
     with pytest.raises(ValueError):
-        fru.load_bin(path='a', blob='a'.encode('ascii'))
+        fru.load(path='a', blob='a'.encode('ascii'))
 
 
 def test_bad_header_checksum():
     blob = b"\x01\x00\x00\x00\x00\x00\x00\x00"
     with pytest.raises(ValueError):
-        fru.load_bin(blob=blob)
+        fru.load(blob=blob)
 
 
 def test_internal_fru_file_not_found():
@@ -120,4 +120,4 @@ def test_checksum_of_zero():
         os.path.dirname(__file__),
         'checksum-zero.bin'
     )
-    fru.load_bin(path)
+    fru.load(path)
