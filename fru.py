@@ -20,9 +20,11 @@ import sys
 try:
     import configparser
 except ImportError:
+    # noinspection PyPep8Naming
     import ConfigParser as configparser
 
 try:
+    # noinspection PyUnresolvedReferences,PyUnboundLocalVariable
     FileNotFoundError
 except NameError:
     FileNotFoundError = IOError
@@ -156,7 +158,7 @@ def load_bin(path=None, blob=None):
     If *path* is provided, it will be read into memory. If *blob* is provided
     it will be used as-is.
 
-    :type path: str
+    :type path: union(str, unicode)
     :type blob: bytes
     """
 

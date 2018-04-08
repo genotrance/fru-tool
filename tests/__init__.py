@@ -15,6 +15,7 @@ from __future__ import unicode_literals
 
 import os
 
+# noinspection PyUnresolvedReferences,PyPackageRequirements
 import pytest
 
 import fru
