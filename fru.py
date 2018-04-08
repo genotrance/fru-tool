@@ -110,7 +110,7 @@ def read_config(path):
 def validate_checksum(blob, offset, length):
     """Validate a chassis, board, or product checksum.
 
-    *blob is the binary data blob, and *offset* is the integer offset that
+    *blob* is the binary data blob, and *offset* is the integer offset that
     the chassis, board, or product info area starts at.
 
     :type blob: bytes
