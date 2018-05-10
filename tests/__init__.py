@@ -121,3 +121,15 @@ def test_checksum_of_zero():
         'checksum-zero.bin'
     )
     fru.load(path)
+
+
+@pytest.mark.parametrize('section', ['board', 'chassis', 'product'])
+def test_extras(section):
+    for i in range(1, 10):
+        key = 'extra{}'.format(i)
+        data = {
+            'common': {'size': 64, 'version': 1},
+            section: {key: '---'}
+        }
+        symmetric_data = fru.load(blob=fru.dump(data))
+        assert data[section][key] == symmetric_data[section][key]

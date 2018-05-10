@@ -312,16 +312,22 @@ def make_chassis(config):
 
     # Strings
     fields = ['part', 'serial']
-    fields.extend(EXTRAS)
-    offset = 0
+
+    # Handle extras, if any.
+    max_extra = max([
+        int(key[5:])
+        for key in config['chassis']
+        if key.startswith('extra')
+    ] or [0])
+    if max_extra:
+        fields.extend(['extra{}'.format(i) for i in range(1, max_extra + 1)])
+
     for k in fields:
         if config['chassis'].get(k):
             value = config['chassis'][k].encode('ascii')
             out += struct.pack('B%ds' % len(value), len(value) | 0xC0, value)
-            offset += 1
-        elif k not in EXTRAS:
+        else:
             out += struct.pack('B', 0)
-            offset += 1
 
     # No more fields
     out += struct.pack('B', 0xC1)
@@ -358,18 +364,24 @@ def make_board(config):
         (date & 0xFF0000) >> 16,
     )
 
-    # Strings
+    # String values
     fields = ['manufacturer', 'product', 'serial', 'part', 'fileid']
-    fields.extend(EXTRAS)
-    offset = 0
-    for k in fields:
-        if config['board'].get(k):
-            value = config['board'][k].encode('ascii')
+
+    # Handle extras, if any.
+    max_extra = max([
+        int(key[5:])
+        for key in config['board']
+        if key.startswith('extra')
+    ] or [0])
+    if max_extra:
+        fields.extend(['extra{}'.format(i) for i in range(1, max_extra + 1)])
+
+    for key in fields:
+        if config['board'].get(key):
+            value = config['board'][key].encode('ascii')
             out += struct.pack('B%ds' % len(value), len(value) | 0xC0, value)
-            offset += 1
-        elif k not in EXTRAS:
+        else:
             out += struct.pack('B', 0)
-            offset += 1
 
     # No more fields
     out += struct.pack('B', 0xC1)
@@ -402,16 +414,22 @@ def make_product(config):
         'manufacturer', 'product', 'part', 'version', 'serial', 'asset',
         'fileid',
     ]
-    fields.extend(EXTRAS)
-    offset = 0
-    for k in fields:
-        if config['product'].get(k):
-            value = config['product'][k].encode('ascii')
+
+    # Handle extras, if any.
+    max_extra = max([
+        int(key[5:])
+        for key in config['product']
+        if key.startswith('extra')
+    ] or [0])
+    if max_extra:
+        fields.extend(['extra{}'.format(i) for i in range(1, max_extra + 1)])
+
+    for key in fields:
+        if config['product'].get(key):
+            value = config['product'][key].encode('ascii')
             out += struct.pack('B%ds' % len(value), len(value) | 0xC0, value)
-            offset += 1
-        elif k not in EXTRAS:
+        else:
             out += struct.pack('B', 0)
-            offset += 1
 
     # No more fields
     out += struct.pack('B', 0xC1)
