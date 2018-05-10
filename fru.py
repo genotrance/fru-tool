@@ -20,17 +20,23 @@ import sys
 try:
     import configparser
 except ImportError:
+    # noinspection PyPep8Naming
     import ConfigParser as configparser
 
 try:
+    # noinspection PyUnresolvedReferences,PyUnboundLocalVariable
     FileNotFoundError
 except NameError:
     FileNotFoundError = IOError
 
 
-__version__ = "2.0"
+__version__ = '2.0'
 
-EXTRAS = ["extra1", "extra2", "extra3", "extra4", "extra5", "extra6", "extra7", "extra8", "extra9"]
+EXTRAS = [
+    'extra1', 'extra2', 'extra3',
+    'extra4', 'extra5', 'extra6',
+    'extra7', 'extra8', 'extra9',
+]
 
 
 def read_config(path):
@@ -66,11 +72,11 @@ def read_config(path):
         ('product', 'language'),
     ]
 
-    for section in ["internal", "chassis", "board", "product", "multirecord"]:
-        if config["common"].get(section, "0") != "1" and section in config:
+    for section in ['internal', 'chassis', 'board', 'product', 'multirecord']:
+        if config['common'].get(section, '0') != '1' and section in config:
             del(config[section])
-        if section in config["common"]:
-            del(config["common"][section])
+        if section in config['common']:
+            del(config['common'][section])
 
     for section, option in integers:
         if section in config and option in config[section]:  # pragma: nobranch
@@ -104,7 +110,7 @@ def read_config(path):
 def validate_checksum(blob, offset, length):
     """Validate a chassis, board, or product checksum.
 
-    *blob is the binary data blob, and *offset* is the integer offset that
+    *blob* is the binary data blob, and *offset* is the integer offset that
     the chassis, board, or product info area starts at.
 
     :type blob: bytes
@@ -113,10 +119,10 @@ def validate_checksum(blob, offset, length):
     """
 
     checksum = ord(blob[offset + length - 1:offset + length])
-    data_sum = 0xff & sum(
-        struct.unpack("%dB" % (length - 1), blob[offset:offset + length - 1])
+    data_sum = sum(
+        struct.unpack('%dB' % (length - 1), blob[offset:offset + length - 1])
     )
-    if data_sum + checksum != 0x100:
+    if 0xff & (data_sum + checksum) != 0:
         raise ValueError('The data does not match its checksum.')
 
 
@@ -130,7 +136,7 @@ def extract_values(blob, offset, names):
 
     :type blob: bytes
     :type offset: int
-    :type names: list[str]
+    :type names: list[union(str, unicode)]
     """
 
     data = {}
@@ -146,20 +152,20 @@ def extract_values(blob, offset, names):
         offset += length + 1
 
 
-def load_bin(path=None, blob=None):
+def load(path=None, blob=None):
     """Load binary FRU information from a file or binary data blob.
 
     If *path* is provided, it will be read into memory. If *blob* is provided
     it will be used as-is.
 
-    :type path: str
+    :type path: union(str, unicode)
     :type blob: bytes
     """
 
     if not path and not blob:
-        raise ValueError("You must specify *path* or *blob*.")
+        raise ValueError('You must specify *path* or *blob*.')
     if path and blob:
-        raise ValueError("You must specify *path* or *blob*, but not both.")
+        raise ValueError('You must specify *path* or *blob*, but not both.')
 
     if path:
         with open(path, 'rb') as f:
@@ -222,15 +228,15 @@ def load_bin(path=None, blob=None):
     return data
 
 
-def make_fru(data):
-    if "common" not in data:
-        raise ValueError("[common] section missing in config")
+def dump(data):
+    if 'common' not in data:
+        raise ValueError('[common] section missing in config')
 
-    if "version" not in data["common"]:
-        raise ValueError("'version' missing in [common]")
+    if 'version' not in data['common']:
+        raise ValueError('"version" missing in [common]')
 
-    if "size" not in data["common"]:
-        raise ValueError("'size' missing in [common]")
+    if 'size' not in data['common']:
+        raise ValueError('"size" missing in [common]')
 
     internal_offset = 0
     chassis_offset = 0
@@ -245,11 +251,11 @@ def make_fru(data):
 
     if data.get('internal', {}).get('data'):
         internal = make_internal(data)
-    if "chassis" in data:
+    if 'chassis' in data:
         chassis = make_chassis(data)
-    if "board" in data:
+    if 'board' in data:
         board = make_board(data)
-    if "product" in data:
+    if 'product' in data:
         product = make_product(data)
 
     pos = 1
@@ -267,8 +273,8 @@ def make_fru(data):
 
     # Header
     out = struct.pack(
-        "BBBBBBB",
-        data["common"].get("version", 1),
+        'BBBBBBB',
+        data['common'].get('version', 1),
         internal_offset,
         chassis_offset,
         board_offset,
@@ -278,23 +284,23 @@ def make_fru(data):
     )
 
     # Checksum
-    out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
+    out += struct.pack('B', (0 - sum(bytearray(out))) & 0xff)
 
     blob = out + internal + chassis + board + product
     difference = data['common']['size'] - len(blob)
-    pad = struct.pack("B" * difference, *[0] * difference)
+    pad = struct.pack('B' * difference, *[0] * difference)
 
-    if len(blob + pad) > data["common"]["size"]:
-        raise ValueError("Too much content, does not fit")
+    if len(blob + pad) > data['common']['size']:
+        raise ValueError('Too much content, does not fit')
 
     return blob + pad
 
 
 def make_internal(data):
     return struct.pack(
-        "B%ds" % len(data["internal"]["data"]),
-        data["common"].get("version", 1),
-        data["internal"]["data"],
+        'B%ds' % len(data['internal']['data']),
+        data['common'].get('version', 1),
+        data['internal']['data'],
     )
 
 
@@ -302,37 +308,43 @@ def make_chassis(config):
     out = bytes()
 
     # Type
-    out += struct.pack("B", config["chassis"].get("type", 0))
+    out += struct.pack('B', config['chassis'].get('type', 0))
 
     # Strings
-    fields = ["part", "serial"]
-    fields.extend(EXTRAS)
-    offset = 0
+    fields = ['part', 'serial']
+
+    # Handle extras, if any.
+    max_extra = max([
+        int(key[5:])
+        for key in config['chassis']
+        if key.startswith('extra')
+    ] or [0])
+    if max_extra:
+        fields.extend(['extra{}'.format(i) for i in range(1, max_extra + 1)])
+
     for k in fields:
-        if config["chassis"].get(k):
-            value = config["chassis"][k].encode('ascii')
-            out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
-            offset += 1
-        elif k not in EXTRAS:
-            out += struct.pack("B", 0)
-            offset += 1
+        if config['chassis'].get(k):
+            value = config['chassis'][k].encode('ascii')
+            out += struct.pack('B%ds' % len(value), len(value) | 0xC0, value)
+        else:
+            out += struct.pack('B', 0)
 
     # No more fields
-    out += struct.pack("B", 0xC1)
+    out += struct.pack('B', 0xC1)
 
     # Padding
     while len(out) % 8 != 5:
-        out += struct.pack("B", 0)
+        out += struct.pack('B', 0)
 
     # Header version and length in bytes
     out = struct.pack(
-        "BB",
-        config["common"].get("version", 1),
+        'BB',
+        config['common'].get('version', 1),
         (len(out) + 3) // 8,
     ) + out
 
     # Checksum
-    out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
+    out += struct.pack('B', (0 - sum(bytearray(out))) & 0xff)
 
     return out
 
@@ -341,46 +353,52 @@ def make_board(config):
     out = bytes()
 
     # Language
-    out += struct.pack("B", config["board"].get("language", 0))
+    out += struct.pack('B', config['board'].get('language', 0))
 
     # Date
-    date = config["board"].get("date", 0)
+    date = config['board'].get('date', 0)
     out += struct.pack(
-        "BBB",
+        'BBB',
         (date & 0xFF),
         (date & 0xFF00) >> 8,
         (date & 0xFF0000) >> 16,
     )
 
-    # Strings
-    fields = ["manufacturer", "product", "serial", "part", "fileid"]
-    fields.extend(EXTRAS)
-    offset = 0
-    for k in fields:
-        if config["board"].get(k):
-            value = config["board"][k].encode('ascii')
-            out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
-            offset += 1
-        elif k not in EXTRAS:
-            out += struct.pack("B", 0)
-            offset += 1
+    # String values
+    fields = ['manufacturer', 'product', 'serial', 'part', 'fileid']
+
+    # Handle extras, if any.
+    max_extra = max([
+        int(key[5:])
+        for key in config['board']
+        if key.startswith('extra')
+    ] or [0])
+    if max_extra:
+        fields.extend(['extra{}'.format(i) for i in range(1, max_extra + 1)])
+
+    for key in fields:
+        if config['board'].get(key):
+            value = config['board'][key].encode('ascii')
+            out += struct.pack('B%ds' % len(value), len(value) | 0xC0, value)
+        else:
+            out += struct.pack('B', 0)
 
     # No more fields
-    out += struct.pack("B", 0xC1)
+    out += struct.pack('B', 0xC1)
 
     # Padding
     while len(out) % 8 != 5:
-        out += struct.pack("B", 0)
+        out += struct.pack('B', 0)
 
     # Header version and length in bytes
     out = struct.pack(
-        "BB",
-        config["common"].get("version", 1),
+        'BB',
+        config['common'].get('version', 1),
         (len(out)+3) // 8,
     ) + out
 
     # Checksum
-    out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
+    out += struct.pack('B', (0 - sum(bytearray(out))) & 0xff)
 
     return out
 
@@ -389,40 +407,46 @@ def make_product(config):
     out = bytes()
 
     # Language
-    out += struct.pack("B", config["product"].get("language", 0))
+    out += struct.pack('B', config['product'].get('language', 0))
 
     # Strings
     fields = [
-        "manufacturer", "product", "part", "version", "serial", "asset",
-        "fileid",
+        'manufacturer', 'product', 'part', 'version', 'serial', 'asset',
+        'fileid',
     ]
-    fields.extend(EXTRAS)
-    offset = 0
-    for k in fields:
-        if config["product"].get(k):
-            value = config["product"][k].encode('ascii')
-            out += struct.pack("B%ds" % len(value), len(value) | 0xC0, value)
-            offset += 1
-        elif k not in EXTRAS:
-            out += struct.pack("B", 0)
-            offset += 1
+
+    # Handle extras, if any.
+    max_extra = max([
+        int(key[5:])
+        for key in config['product']
+        if key.startswith('extra')
+    ] or [0])
+    if max_extra:
+        fields.extend(['extra{}'.format(i) for i in range(1, max_extra + 1)])
+
+    for key in fields:
+        if config['product'].get(key):
+            value = config['product'][key].encode('ascii')
+            out += struct.pack('B%ds' % len(value), len(value) | 0xC0, value)
+        else:
+            out += struct.pack('B', 0)
 
     # No more fields
-    out += struct.pack("B", 0xC1)
+    out += struct.pack('B', 0xC1)
 
     # Padding
     while len(out) % 8 != 5:
-        out += struct.pack("B", 0)
+        out += struct.pack('B', 0)
 
     # Header version and length in bytes
     out = struct.pack(
-        "BB",
-        config["common"].get("version", 1),
+        'BB',
+        config['common'].get('version', 1),
         (len(out) + 3) // 8,
     ) + out
 
     # Checksum
-    out += struct.pack("B", (0 - sum(bytearray(out))) & 0xff)
+    out += struct.pack('B', (0 - sum(bytearray(out))) & 0xff)
 
     return out
 
@@ -430,24 +454,25 @@ def make_product(config):
 def run(ini_file, bin_file):  # pragma: nocover
     try:
         configuration = read_config(ini_file)
-        blob = make_fru(configuration)
+        blob = dump(configuration)
     except ValueError as error:
         print(error.message)
     else:
-        open(bin_file, "wb").write(blob)
+        with open(bin_file, 'wb') as f:
+            f.write(blob)
 
 
-if __name__ == "__main__":  # pragma: nocover
+if __name__ == '__main__':  # pragma: nocover
     if len(sys.argv) < 3:
-        print("fru.py input.ini output.bin [--force] [--cmd]")
+        print('fru.py input.ini output.bin [--force] [--cmd]')
         sys.exit()
 
     if not os.path.exists(sys.argv[1]):
-        print("Missing INI file %s" % sys.argv[1])
+        print('Missing INI file %s' % sys.argv[1])
         sys.exit()
 
-    if os.path.exists(sys.argv[2]) and "--force" not in sys.argv:
-        print("BIN file %s exists" % sys.argv[2])
+    if os.path.exists(sys.argv[2]) and '--force' not in sys.argv:
+        print('BIN file %s exists' % sys.argv[2])
         sys.exit()
 
     run(sys.argv[1], sys.argv[2])
