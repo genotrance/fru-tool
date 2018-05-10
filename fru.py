@@ -30,7 +30,7 @@ except NameError:
     FileNotFoundError = IOError
 
 
-__version__ = '2.0'
+__version__ = '3.0.0'
 
 EXTRAS = [
     'extra1', 'extra2', 'extra3',
