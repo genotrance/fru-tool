@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # fru.py - Generate a binary IPMI FRU data file.
 # Copyright (c) 2017 Dell Technologies
 # Copyright (c) 2018 Kurt McKee <contactme@kurtmckee.org>
