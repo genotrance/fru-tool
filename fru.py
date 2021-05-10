@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # fru.py - Generate a binary IPMI FRU data file.
 # Copyright (c) 2017 Dell Technologies
 # Copyright (c) 2018 Kurt McKee <contactme@kurtmckee.org>
@@ -8,26 +7,11 @@
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
+import configparser
 import itertools
 import os
 import struct
 import sys
-
-try:
-    import configparser
-except ImportError:
-    # noinspection PyPep8Naming
-    import ConfigParser as configparser
-
-try:
-    # noinspection PyUnresolvedReferences,PyUnboundLocalVariable
-    FileNotFoundError
-except NameError:
-    FileNotFoundError = IOError
 
 
 __version__ = '3.0.0'
@@ -43,22 +27,13 @@ def read_config(path):
     parser = configparser.ConfigParser()
     parser.read(path)
 
-    try:
-        config = {
-            section.decode('ascii'): {
-                option.decode('ascii'): parser.get(section, option).strip('"')
-                for option in parser.options(section)
-            }
-            for section in parser.sections()
+    config = {
+        section: {
+            option: parser.get(section, option).strip('"')
+            for option in parser.options(section)
         }
-    except AttributeError:
-        config = {
-            section: {
-                option: parser.get(section, option).strip('"')
-                for option in parser.options(section)
-            }
-            for section in parser.sections()
-        }
+        for section in parser.sections()
+    }
 
     integers = [
         ('common', 'size'),
@@ -456,7 +431,7 @@ def run(ini_file, bin_file):  # pragma: nocover
         configuration = read_config(ini_file)
         blob = dump(configuration)
     except ValueError as error:
-        print(error.message)
+        print(error.args[0])
     else:
         with open(bin_file, 'wb') as f:
             f.write(blob)
