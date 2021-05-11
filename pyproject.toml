@@ -73,6 +73,6 @@ branch = true
 
 [tool.coverage.paths]
 source = [
-    "fru",
+    "src",
     ".tox/*/site-packages",
 ]
