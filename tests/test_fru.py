@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
-# Tests for fru.py
-# Copyright (c) 2017 Dell Technologies
-# Copyright (c) 2018 Kurt McKee <contactme@kurtmckee.org>
+# Unit tests for fru-tool
+# Copyright 2018-2021 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2017 Dell Technologies
 #
-# https://github.com/genotrance/fru-tool/
+# https://github.com/kurtmckee/fru-tool/
 #
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 
 import os
 

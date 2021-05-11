@@ -1,8 +1,8 @@
-# fru.py - Generate a binary IPMI FRU data file.
-# Copyright (c) 2017 Dell Technologies
-# Copyright (c) 2018 Kurt McKee <contactme@kurtmckee.org>
+# fru.py - Read and write binary IPMI FRU files
+# Copyright 2018-2021 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2017 Dell Technologies
 #
-# https://github.com/genotrance/fru-tool/
+# https://github.com/kurtmckee/fru-tool/
 #
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
@@ -13,8 +13,6 @@ import os
 import struct
 import sys
 
-
-__version__ = '3.0.0'
 
 EXTRAS = [
     'extra1', 'extra2', 'extra3',
