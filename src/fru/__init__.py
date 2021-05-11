@@ -11,7 +11,6 @@ import configparser
 import itertools
 import os
 import struct
-import sys
 
 
 EXTRAS = [
@@ -424,28 +423,33 @@ def make_product(config):
     return out
 
 
-def run(ini_file, bin_file):  # pragma: nocover
+def run_cli():  # pragma: nocover
+    import sys
+
+    if len(sys.argv) < 3:
+        print('fru-cli input.ini output.bin [--force] [--cmd]')
+        sys.exit(1)
+
+    ini_file = sys.argv[1]
+    bin_file = sys.argv[2]
+
+    if not os.path.exists(ini_file):
+        print(f'Missing INI file {ini_file}')
+        sys.exit(1)
+
+    if os.path.exists(bin_file) and '--force' not in sys.argv:
+        print(f'BIN file {bin_file} exists')
+        sys.exit(1)
+
     try:
         configuration = read_config(ini_file)
         blob = dump(configuration)
     except ValueError as error:
         print(error.args[0])
     else:
-        with open(bin_file, 'wb') as f:
-            f.write(blob)
+        with open(bin_file, 'wb') as file:
+            file.write(blob)
 
 
 if __name__ == '__main__':  # pragma: nocover
-    if len(sys.argv) < 3:
-        print('fru.py input.ini output.bin [--force] [--cmd]')
-        sys.exit()
-
-    if not os.path.exists(sys.argv[1]):
-        print('Missing INI file %s' % sys.argv[1])
-        sys.exit()
-
-    if os.path.exists(sys.argv[2]) and '--force' not in sys.argv:
-        print('BIN file %s exists' % sys.argv[2])
-        sys.exit()
-
-    run(sys.argv[1], sys.argv[2])
+    run_cli()
