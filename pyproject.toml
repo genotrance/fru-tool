@@ -24,6 +24,8 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.6"
+click = "^8.0.0"
+importlib-metadata = { version = "^4.0.1", python = "<3.8" }
 
 
 [tool.poetry.dev-dependencies]
