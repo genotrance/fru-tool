@@ -7,7 +7,6 @@
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
 
-from .api import (
-    load,
-    dump,
-)
+from . import console
+
+console.run_cli()

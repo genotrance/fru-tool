@@ -31,7 +31,7 @@ tox = "^3.23.1"
 
 
 [tool.poetry.scripts]
-fru-cli = 'fru:run_cli'
+fru-cli = 'fru.console:run_cli'
 
 
 [build-system]
