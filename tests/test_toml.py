@@ -9,11 +9,13 @@
 
 
 import datetime
+import os
 
 # noinspection PyUnresolvedReferences,PyPackageRequirements
 import pytest
 
 import fru.exceptions
+import fru.fru_format
 import fru.toml_format
 
 
@@ -134,3 +136,50 @@ def test_roundtrip_fru_toml_fru(section):
     fru_blob = fru.fru_format.dump(toml_data)
 
     assert original_blob == fru_blob
+
+
+@pytest.mark.parametrize('name', sections)
+def test_basic_toml_sections(name):
+    path = os.path.join(os.path.dirname(__file__), 'basic-{}.toml'.format(name))
+    config = fru.toml_format.load(path)
+    actual = fru.fru_format.dump(config)
+
+    path = os.path.join(os.path.dirname(__file__), 'basic-{}.bin'.format(name))
+    with open(path, 'rb') as f:
+        expected = f.read()
+
+    assert actual == expected
+
+
+@pytest.mark.parametrize('name', sections)
+def test_identical_loading(name):
+    path = os.path.join(os.path.dirname(__file__), 'basic-{}.toml'.format(name))
+    toml_data = fru.toml_format.load(path)
+
+    path = os.path.join(os.path.dirname(__file__), 'basic-{}.bin'.format(name))
+    bin_data = fru.fru_format.load(path=path)
+
+    assert len(toml_data) == len(bin_data)
+    assert toml_data == bin_data
+
+
+def test_skipped_section():
+    path = os.path.join(os.path.dirname(__file__), 'skip-section.toml')
+    data = fru.toml_format.load(path)
+    assert 'internal' in data
+
+
+def test_internal_fru_file_not_found():
+    path = os.path.join(
+        os.path.dirname(__file__),
+        'internal-fru-file-not-found.toml'
+    )
+    with pytest.raises(ValueError) as error:
+        fru.toml_format.load(path)
+        assert 'not found' in error.msg
+
+
+def test_internal_fru_requested_but_empty():
+    path = os.path.join(os.path.dirname(__file__), 'internal-empty.toml')
+    data = fru.toml_format.load(path)
+    assert 'internal' in data

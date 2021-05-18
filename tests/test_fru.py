@@ -14,7 +14,6 @@ import os
 import pytest
 
 import fru.fru_format
-import fru.toml_format
 
 
 sections = (
@@ -26,31 +25,6 @@ sections = (
     'internal-file',
     'product',
 )
-
-
-@pytest.mark.parametrize('name', sections)
-def test_basic_ini_sections(name):
-    path = os.path.join(os.path.dirname(__file__), 'basic-{}.ini'.format(name))
-    config = fru.toml_format.load(path)
-    actual = fru.fru_format.dump(config)
-
-    path = os.path.join(os.path.dirname(__file__), 'basic-{}.bin'.format(name))
-    with open(path, 'rb') as f:
-        expected = f.read()
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize('name', sections)
-def test_identical_loading(name):
-    path = os.path.join(os.path.dirname(__file__), 'basic-{}.ini'.format(name))
-    toml_data = fru.toml_format.load(path)
-
-    path = os.path.join(os.path.dirname(__file__), 'basic-{}.bin'.format(name))
-    bin_data = fru.fru_format.load(path=path)
-
-    assert len(toml_data) == len(bin_data)
-    assert toml_data == bin_data
 
 
 def test_too_much_data():
@@ -82,12 +56,6 @@ def test_missing_required_elements():
         fru.fru_format.dump({'common': {'format_version': 1}})
 
 
-def test_skipped_section():
-    path = os.path.join(os.path.dirname(__file__), 'skip-section.ini')
-    data = fru.toml_format.load(path)
-    assert 'internal' in data
-
-
 def test_load_bad_calls():
     with pytest.raises(ValueError):
         fru.fru_format.load()
@@ -99,22 +67,6 @@ def test_bad_header_checksum():
     blob = b"\x01\x00\x00\x00\x00\x00\x00\x00"
     with pytest.raises(ValueError):
         fru.fru_format.load(blob=blob)
-
-
-def test_internal_fru_file_not_found():
-    path = os.path.join(
-        os.path.dirname(__file__),
-        'internal-fru-file-not-found.ini'
-    )
-    with pytest.raises(ValueError) as error:
-        fru.toml_format.load(path)
-        assert 'not found' in error.msg
-
-
-def test_internal_fru_requested_but_empty():
-    path = os.path.join(os.path.dirname(__file__), 'internal-empty.ini')
-    data = fru.toml_format.load(path)
-    assert 'internal' in data
 
 
 def test_checksum_of_zero():
