@@ -13,11 +13,11 @@ import os
 # noinspection PyUnresolvedReferences,PyPackageRequirements
 import pytest
 
-# noinspection PyUnresolvedReferences
-import fru.api
+import fru.fru_format
+import fru.toml_format
 
 
-sections = [
+sections = (
     'all',
     'empty',
     'board',
@@ -25,14 +25,14 @@ sections = [
     'internal-data',
     'internal-file',
     'product',
-]
+)
 
 
 @pytest.mark.parametrize('name', sections)
 def test_basic_ini_sections(name):
     path = os.path.join(os.path.dirname(__file__), 'basic-{}.ini'.format(name))
-    config = fru.api.read_config(path)
-    actual = fru.api.dump(config)
+    config = fru.toml_format.load(path)
+    actual = fru.fru_format.dump(config)
 
     path = os.path.join(os.path.dirname(__file__), 'basic-{}.bin'.format(name))
     with open(path, 'rb') as f:
@@ -44,60 +44,61 @@ def test_basic_ini_sections(name):
 @pytest.mark.parametrize('name', sections)
 def test_identical_loading(name):
     path = os.path.join(os.path.dirname(__file__), 'basic-{}.ini'.format(name))
-    ini_data = fru.api.read_config(path)
+    toml_data = fru.toml_format.load(path)
 
     path = os.path.join(os.path.dirname(__file__), 'basic-{}.bin'.format(name))
-    bin_data = fru.api.load(path=path)
+    bin_data = fru.fru_format.load(path=path)
 
-    assert ini_data == bin_data
+    assert len(toml_data) == len(bin_data)
+    assert toml_data == bin_data
 
 
 def test_too_much_data():
     config = {
-        "common": {"version": 1, "size": 20},
-        "chassis": {"part": "a" * 250},
+        'common': {'format_version': 1, 'size': 20},
+        'chassis': {'part_number': 'a' * 250},
     }
     with pytest.raises(ValueError):
-        fru.api.dump(config)
+        fru.fru_format.dump(config)
 
 
 def test_empty_everything():
     config = {
-        "common": {
-            "version": 1,
-            "size": 256,
+        'common': {
+            'format_version': 1,
+            'size': 256,
         },
-        "internal": {}, "chassis": {}, "board": {}, "product": {},
+        'internal': {}, 'chassis': {}, 'board': {}, 'product': {},
     }
-    fru.api.dump(config)
+    fru.fru_format.dump(config)
 
 
 def test_missing_required_elements():
     with pytest.raises(ValueError):
-        fru.api.dump({})
+        fru.fru_format.dump({})
     with pytest.raises(ValueError):
-        fru.api.dump({"common": {"size": 512}})
+        fru.fru_format.dump({'common': {'size': 512}})
     with pytest.raises(ValueError):
-        fru.api.dump({"common": {"version": 1}})
+        fru.fru_format.dump({'common': {'format_version': 1}})
 
 
 def test_skipped_section():
     path = os.path.join(os.path.dirname(__file__), 'skip-section.ini')
-    config = fru.api.read_config(path)
-    assert "internal" not in config
+    data = fru.toml_format.load(path)
+    assert 'internal' in data
 
 
 def test_load_bad_calls():
     with pytest.raises(ValueError):
-        fru.api.load()
+        fru.fru_format.load()
     with pytest.raises(ValueError):
-        fru.api.load(path='a', blob='a'.encode('ascii'))
+        fru.fru_format.load(path='a', blob='a'.encode('ascii'))
 
 
 def test_bad_header_checksum():
     blob = b"\x01\x00\x00\x00\x00\x00\x00\x00"
     with pytest.raises(ValueError):
-        fru.api.load(blob=blob)
+        fru.fru_format.load(blob=blob)
 
 
 def test_internal_fru_file_not_found():
@@ -106,14 +107,14 @@ def test_internal_fru_file_not_found():
         'internal-fru-file-not-found.ini'
     )
     with pytest.raises(ValueError) as error:
-        fru.api.read_config(path)
+        fru.toml_format.load(path)
         assert 'not found' in error.msg
 
 
 def test_internal_fru_requested_but_empty():
     path = os.path.join(os.path.dirname(__file__), 'internal-empty.ini')
-    data = fru.api.read_config(path)
-    assert 'internal' not in data
+    data = fru.toml_format.load(path)
+    assert 'internal' in data
 
 
 def test_checksum_of_zero():
@@ -121,16 +122,15 @@ def test_checksum_of_zero():
         os.path.dirname(__file__),
         'checksum-zero.bin'
     )
-    fru.api.load(path)
+    fru.fru_format.load(path)
 
 
 @pytest.mark.parametrize('section', ['board', 'chassis', 'product'])
-def test_extras(section):
-    for i in range(1, 10):
-        key = 'extra{}'.format(i)
-        data = {
-            'common': {'size': 64, 'version': 1},
-            section: {key: '---'}
-        }
-        symmetric_data = fru.api.load(blob=fru.api.dump(data))
-        assert data[section][key] == symmetric_data[section][key]
+@pytest.mark.parametrize('count', [i for i in range(10)])
+def test_custom_fields(section, count):
+    data = {
+        'common': {'size': 64, 'format_version': 1},
+        section: {'custom_fields': [f'{i:02}' for i in range(count)]}
+    }
+    symmetric_data = fru.fru_format.load(blob=fru.fru_format.dump(data))
+    assert len(symmetric_data[section]['custom_fields']) == count
