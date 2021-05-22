@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fru"
-version = "3.0.0"
+version = "4.0.0a1"
 description = "Read and write binary FRU files"
 authors = [
     "Kurt McKee <contactme@kurtmckee.org>",
