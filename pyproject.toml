@@ -1,0 +1,85 @@
+[tool.poetry]
+name = "fru"
+version = "4.0.0a1"
+description = "Read and write binary FRU files"
+authors = [
+    "Kurt McKee <contactme@kurtmckee.org>",
+    "Ganesh Viswanathan <dev@genotrance.com>",
+]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/kurtmckee/fru-tool/"
+keywords = ["fru", "ipmi"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Customer Service",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Manufacturing",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Topic :: System :: Hardware",
+    "Topic :: Utilities",
+]
+
+
+[tool.poetry.dependencies]
+python = "^3.6"
+click = "^8.0.0"
+importlib-metadata = { version = "^4.0.1", python = "<3.8" }
+toml = "^0.10.2"
+
+
+[tool.poetry.dev-dependencies]
+tox = "^3.23.1"
+
+
+[tool.poetry.scripts]
+frutool = 'fru.console:run'
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.tox]
+legacy_tox_ini = """
+
+[tox]
+envlist =
+    coverage_erase
+    py{39, 38, 37, 36}
+    coverage_report
+skip_missing_interpreters = True
+isolated_build = True
+
+[testenv]
+deps =
+    pytest
+    pytest-cov
+commands =
+    {envpython} -m pytest --cov=fru --cov=tests --cov-append --cov-report=term
+
+[testenv:coverage_erase]
+skipsdist = true
+skip_install = true
+deps = coverage[toml]
+commands = coverage erase
+
+[testenv:coverage_report]
+skipsdist = true
+skip_install = true
+deps = coverage[toml]
+commands = coverage html -d htmlcov
+"""
+
+
+[tool.coverage.run]
+branch = true
+
+
+[tool.coverage.paths]
+source = [
+    "src",
+    ".tox/*/site-packages",
+]

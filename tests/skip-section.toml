@@ -1,0 +1,9 @@
+[common]
+format_version = 1
+size = 1024
+
+include_internal = true
+include_chassis = false
+include_board = false
+include_product = false
+include_multirecord = false

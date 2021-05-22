@@ -1,0 +1,48 @@
+[common]
+format_version = 1
+size = 1024
+
+include_internal = true
+include_chassis = false
+include_board = false
+include_product = false
+include_multirecord = false
+
+
+[internal]
+data = "internal-data"
+
+
+[chassis]
+type = 0x17
+part_number = "chassis-part"
+serial_number = "chassis-serial"
+custom_fields = [
+    "chassis-extra1",
+    "chassis-extra2",
+    "chassis-extra3",
+    "chassis-extra4",
+]
+
+
+[board]
+language_code = 0
+mfg_date_time = "2017-07-10 16:30"
+manufacturer = "board-manufacturer"
+product_name = "board-product"
+serial_number = "board-serial"
+part_number = "board-part"
+fru_file_id = "board-fileid"
+custom_fields = ["board-extra1", "board-extra2"]
+
+
+[product]
+language_code = 0
+manufacturer = "product-manufacturer"
+product_name = "product-product"
+part_number = "product-part"
+product_version = "product-version"
+serial_number = "product-serial"
+asset_tag = "product-asset"
+fru_file_id = "product-fileid"
+custom_fields = ["product-extra1", "product-extra2", "product-extra3"]
