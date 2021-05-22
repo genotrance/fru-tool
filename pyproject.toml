@@ -26,6 +26,7 @@ classifiers = [
 python = "^3.6"
 click = "^8.0.0"
 importlib-metadata = { version = "^4.0.1", python = "<3.8" }
+toml = "^0.10.2"
 
 
 [tool.poetry.dev-dependencies]
@@ -33,7 +34,7 @@ tox = "^3.23.1"
 
 
 [tool.poetry.scripts]
-fru-cli = 'fru.console:run_cli'
+frutool = 'fru.console:run'
 
 
 [build-system]

@@ -7,7 +7,8 @@
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
 
-from .api import (
+
+from .fru_format import (
     load,
     dump,
 )
