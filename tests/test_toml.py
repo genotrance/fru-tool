@@ -31,54 +31,40 @@ sections = [
 
 
 @pytest.mark.parametrize(
-    'stamp, minutes, date',
+    'stamp, minutes',
     (
-            ('1996-01-01 00:00', 0x00_00_00, datetime.datetime(1996, 1, 1, 0, 0)),
-            ('2017-05-29 00:15', 0xab_cd_ef, datetime.datetime(2017, 5, 29, 0, 15)),
-            ('2027-11-24 20:15', 0xff_ff_ff, datetime.datetime(2027, 11, 24, 20, 15)),
+            ('1996-01-01 00:00', 0x00_00_00),
+            ('2017-05-29 00:15', 0xab_cd_ef),
+            ('2027-11-24 20:15', 0xff_ff_ff),
     ),
 )
-def test_convert_valid_dates(stamp, minutes, date):
+def test_convert_valid_dates(stamp, minutes):
     """Confirm valid datetime conversions."""
 
-    assert fru.toml_format.convert_datetime_to_minutes(date) == minutes
     assert fru.toml_format.convert_str_to_minutes(stamp) == minutes
     assert fru.toml_format.convert_minutes_to_str(minutes) == stamp
 
 
 @pytest.mark.parametrize(
-    'date, exception',
+    'date',
     (
-            (datetime.datetime(1990, 1, 1, 0, 0), fru.exceptions.DateTimeTooLow),
-            (datetime.datetime(2030, 1, 1, 0, 0), fru.exceptions.DateTimeTooHigh),
-            (datetime.datetime(2000, 1, 1, 0, 0, 55), fru.exceptions.DateTimeIncludesSeconds),
+            '1900-01-01 00:00',  # too low
+            '3000-01-01 00:00',  # too high
+            'tomorrow morning',  # bad format
     ),
 )
-def test_convert_datetime_to_minutes_invalid(date, exception):
+def test_convert_str_to_minutes_invalid(date):
     """Confirm invalid datetime conversions raise expected errors."""
 
-    with pytest.raises(exception):
-        fru.toml_format.convert_datetime_to_minutes(date)
+    with pytest.raises(fru.exceptions.DateTimeException):
+        fru.toml_format.convert_str_to_minutes(date)
 
 
-def test_convert_str_to_minutes_invalid():
-    """Confirm invalid datetime stamps raise expected errors."""
-
-    with pytest.raises(fru.exceptions.DateTimeIncorrectFormat):
-        fru.toml_format.convert_str_to_minutes('')
-
-
-@pytest.mark.parametrize(
-    'minutes, exception',
-    (
-            (-1, fru.exceptions.DateTimeTooLow),
-            (0x1_00_00_00, fru.exceptions.DateTimeTooHigh),
-    ),
-)
-def test_convert_minutes_to_str_invalid(minutes, exception):
+@pytest.mark.parametrize('minutes', (-1, 0x1_00_00_00))
+def test_convert_minutes_to_str_invalid(minutes):
     """Confirm invalid minutes values raise expected errors."""
 
-    with pytest.raises(exception):
+    with pytest.raises(fru.exceptions.DateTimeException):
         fru.toml_format.convert_minutes_to_str(minutes)
 
 
@@ -101,6 +87,12 @@ def test_repr_(value, expected):
     """Confirm value types are represented correctly in the TOML output."""
 
     assert fru.toml_format.repr_(value) == expected
+
+
+def test_repr_bad_value():
+    with pytest.raises(fru.exceptions.TOMLException):
+        # noinspection PyTypeChecker
+        fru.toml_format.repr_(None)
 
 
 def test_dump_empty():
@@ -183,3 +175,12 @@ def test_internal_fru_requested_but_empty():
     path = os.path.join(os.path.dirname(__file__), 'internal-empty.toml')
     data = fru.toml_format.load(path)
     assert 'internal' in data
+
+
+def test_repr_internal_empty():
+    assert fru.toml_format.repr_internal(b'') == '[]'
+
+
+def test_repr_internal():
+    expected = '[\n    0x31, 0x32, 0x33,\n]'
+    assert fru.toml_format.repr_internal(b'123') == expected

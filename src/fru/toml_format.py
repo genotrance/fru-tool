@@ -29,27 +29,6 @@ min_date =  datetime.datetime(1996, 1, 1, 0, 0)  # 0x000000
 max_date = datetime.datetime(2027, 11, 24, 20, 15)  # 0xffffff
 
 
-
-def convert_datetime_to_minutes(date: datetime.datetime) -> int:
-    """Convert a datetime to the number of minutes since 1996-01-01 00:00."""
-
-    stamp = date.strftime('%Y-%m-%dT%H:%M:%S')
-
-    if date < min_date:
-        msg = f'The date/time "{stamp}" must be at least 1996-01-01T00:00:00'
-        raise exceptions.DateTimeTooLow(msg)
-
-    if date > max_date:
-        msg = f'The date/time "{stamp}" must be at most 2027-11-24T20:15:00'
-        raise exceptions.DateTimeTooHigh(msg)
-
-    if date.second:
-        msg = f'The date/time "{stamp}" must have a value of 00 seconds'
-        raise exceptions.DateTimeIncludesSeconds(msg)
-
-    return int((date - min_date).total_seconds()) // 60
-
-
 def convert_str_to_minutes(stamp: str) -> int:
     """Convert a str to the number of minutes since 1996-01-01 00:00."""
 
@@ -57,9 +36,17 @@ def convert_str_to_minutes(stamp: str) -> int:
         date = datetime.datetime.strptime(stamp, '%Y-%m-%d %H:%M')
     except ValueError:
         msg = f'The date "{stamp}" must follow the format "YYYY-MM-DD HH:MM"'
-        raise exceptions.DateTimeIncorrectFormat(msg)
+        raise exceptions.DateTimeException(msg)
 
-    return convert_datetime_to_minutes(date)
+    if date < min_date:
+        msg = f'The date/time "{stamp}" must be at least 1996-01-01 00:00'
+        raise exceptions.DateTimeException(msg)
+
+    if date > max_date:
+        msg = f'The date/time "{stamp}" must be at most 2027-11-24 20:15'
+        raise exceptions.DateTimeException(msg)
+
+    return int((date - min_date).total_seconds()) // 60
 
 
 def convert_minutes_to_str(minutes: int) -> str:
@@ -71,11 +58,11 @@ def convert_minutes_to_str(minutes: int) -> str:
 
     if minutes < 0:
         msg = f'*minutes* must be >= 0 (got {minutes})'
-        raise exceptions.DateTimeTooLow(minutes)
+        raise exceptions.DateTimeException(minutes)
 
     if minutes > 0xff_ff_ff:
         msg = f'*minutes* must be <= 0xffffff (got 0x{minutes:x})'
-        raise exceptions.DateTimeTooHigh(minutes)
+        raise exceptions.DateTimeException(minutes)
 
     date = min_date + datetime.timedelta(minutes=minutes)
     return date.strftime('%Y-%m-%d %H:%M')
@@ -94,8 +81,8 @@ def repr_(value: Union[bool, int, str, List]) -> str:
         output = ' '.join(f'{repr_(v)},' for v in value).rstrip(',')
         return f'[{output}]'
 
-    msg = f'Unable to represent {repr(value)} in the TOML format'
-    raise exceptions.FRUException(msg)
+    msg = f'Unable to represent {repr(value)} (type={type(value)}) in the TOML format'
+    raise exceptions.TOMLException(msg)
 
 
 def repr_internal(value: bytes) -> str:
@@ -136,6 +123,7 @@ def load(path: Union[pathlib.Path, str] = None, text: str = None) -> Dict[str, D
         toml_data = toml.load(path)
     else:
         toml_data = toml.loads(text)
+
     for section in data:
         if section in toml_data:
             data[section].update(toml_data[section])
@@ -164,8 +152,8 @@ def load(path: Union[pathlib.Path, str] = None, text: str = None) -> Dict[str, D
     # Standardize integer values.
     for section, key in integers:
         if not isinstance(data.get(section, {}).get(key, 0), int):
-            msg = f'Section [{section}] key {key} must be a number'
-            raise exceptions.FRUException(msg)
+            msg = f'Section [{section}] key "{key}" must be a number'
+            raise exceptions.TOMLException(msg)
 
     # Standardize date/time values.
     for section, key in dates:
@@ -173,21 +161,21 @@ def load(path: Union[pathlib.Path, str] = None, text: str = None) -> Dict[str, D
             # Convert a default value of 0 to a corresponding string.
             if not data[section][key]:
                 data[section][key] = '1996-01-01 00:00'
-            # TOML directly supports date/time objects.
-            if isinstance(data[section][key], datetime.datetime):
-                data[section][key] = convert_datetime_to_minutes(data[section][key])
-            elif isinstance(data[section][key], str):
-                data[section][key] = convert_str_to_minutes(data[section][key])
-            else:
-                msg = f'The [{section}] section key "{key}" must be a string'
-                raise exceptions.FRUException(msg)
+            if not isinstance(data[section][key], str):
+                msg = f'Section [{section}] key "{key}" must be a string'
+                raise exceptions.TOMLException(msg)
+            data[section][key] = convert_str_to_minutes(data[section][key])
 
     # Normalize the internal info area data.
     if data.get('internal', {}).get('data'):
-        if isinstance(data['internal']['data'], list):
+        msg = f'Section [internal] key "data" must be a list of numbers or a string'
+        try:
             data['internal']['data'] = bytes(data['internal']['data'])
-        else:
-            data['internal']['data'] = data['internal']['data'].encode('utf8')
+        except TypeError:
+            try:
+                data['internal']['data'] = data['internal']['data'].encode('utf8')
+            except AttributeError:
+                raise exceptions.TOMLException(msg)
     elif data.get('internal', {}).get('file'):
         internal_file = os.path.join(
             os.path.dirname(path), data['internal']['file']
@@ -197,7 +185,7 @@ def load(path: Union[pathlib.Path, str] = None, text: str = None) -> Dict[str, D
                 data['internal']['data'] = f.read()
         except FileNotFoundError:
             msg = f'Internal info area file {internal_file} not found'
-            raise exceptions.FRUException(msg)
+            raise exceptions.TOMLException(msg)
     if 'file' in data.get('internal', {}):
         del(data['internal']['file'])
 
