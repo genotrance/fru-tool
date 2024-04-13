@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fru"
-version = "4.0.0a1"
+version = "4.0.0"
 description = "Read and write binary FRU files"
 authors = [
     "Kurt McKee <contactme@kurtmckee.org>",
@@ -8,6 +8,9 @@ authors = [
 ]
 license = "MIT"
 readme = "README.rst"
+include = [
+    "CHANGELOG.rst",
+]
 repository = "https://github.com/kurtmckee/fru-tool/"
 keywords = ["fru", "ipmi"]
 classifiers = [
