@@ -1,0 +1,84 @@
+name: "🔬 Test"
+
+on:
+  pull_request: null
+  push:
+    branches:
+      - "main"
+      - "releases"
+
+jobs:
+  test:
+    name: "Test (${{ matrix.os.name }})"
+
+    strategy:
+      matrix:
+        os:
+          - name: "Linux"
+            runner: "ubuntu-latest"
+          - name: "macOS"
+            runner: "macos-latest"
+          - name: "Windows"
+            runner: "windows-latest"
+
+        # Each operating system should test all Python interpreters simultaneously.
+        # This nested-list syntax accomplishes that goal
+        # without creating cross-products of every possible OS and interpreter.
+        #
+        # Note: The CPython interpreter versions should be in ascending order
+        # because the last-listed version will be the default CPython version.
+        #
+        cpythons:
+          - - "3.8"
+            - "3.9"
+            - "3.10"
+            - "3.11"
+            - "3.12"
+        cpython-beta:
+          - "3.13"
+      fail-fast: false
+
+    runs-on: "${{ matrix.os.runner }}"
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633" # v4.1.2
+
+      - name: "Setup Pythons"
+        uses: "actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d" # v5.1.0
+        with:
+          python-version: "${{
+            format(
+              '{0}\n{1}',
+              matrix.cpython-beta,
+              join(matrix.cpythons, '\n')
+            )
+            }}"
+          allow-prereleases: true
+
+      - name: "Detect Pythons"
+        uses: "kurtmckee/detect-pythons@38187a5464f266e93e5c1467699f7be2bf521d2e" # v1.1.0
+
+      - name: "Restore cache"
+        id: "restore-cache"
+        uses: "actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9" # v4.0.2
+        with:
+          path: |
+            .mypy_cache/
+            .tox/
+            .venv/
+          key: "test-os=${{ runner.os }}-hash=${{ hashFiles('.python-identifiers', 'pyproject.toml', 'tox.ini', 'requirements/**/*.txt') }}"
+
+      - name: "Identify venv path"
+        shell: "bash"
+        run: |
+          echo "venv-path=.venv/${{ runner.os == 'Windows' && 'Scripts' || 'bin' }}" >> "$GITHUB_ENV"
+
+      - name: "Create a virtual environment"
+        if: "steps.restore-cache.outputs.cache-hit == false"
+        run: |
+          python -m venv .venv
+          ${{ env.venv-path }}/python -m pip install --upgrade pip setuptools wheel
+          ${{ env.venv-path }}/pip install tox
+
+      - name: "Run the test suite"
+        run: "${{ env.venv-path }}/tox"
