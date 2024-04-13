@@ -1,5 +1,5 @@
 # fru - Read and write binary IPMI FRU files
-# Copyright 2018-2021 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2018-2024 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2017 Dell Technologies
 #
 # https://github.com/kurtmckee/fru-tool/
@@ -8,7 +8,6 @@
 # https://opensource.org/licenses/MIT
 
 
-from .fru_format import (
-    load,
-    dump,
-)
+from .fru_format import dump, load
+
+__all__ = ("dump", "load")

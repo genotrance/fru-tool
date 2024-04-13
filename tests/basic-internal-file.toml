@@ -10,7 +10,7 @@ include_multirecord = false
 
 
 [internal]
-file = "internal-fru.txt"
+file = "internal-fru.bin"
 
 
 [chassis]
