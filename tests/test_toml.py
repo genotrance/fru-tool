@@ -7,8 +7,8 @@
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
 
-
 import os
+import unittest.mock
 
 import pytest
 
@@ -178,3 +178,19 @@ def test_repr_internal_empty():
 def test_repr_internal():
     expected = "[\n    0x31, 0x32, 0x33,\n]"
     assert fru.toml_format.repr_internal(b"123") == expected
+
+
+def test_encoding():
+    """Verify UTF-8 encoding is explicitly specified when opening a path."""
+
+    original_open = open
+
+    def replacement_open(*args, **kwargs):
+        # If 'encoding' is not specified, default to "UTF-32" to force a test failure.
+        encoding = kwargs.pop("encoding", "utf-32")
+        return original_open(*args, encoding=encoding, **kwargs)
+
+    path = os.path.join(os.path.dirname(__file__), "basic-all.toml")
+
+    with unittest.mock.patch("builtins.open", replacement_open):
+        assert fru.toml_format.load(path=path) is not None
