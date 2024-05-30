@@ -121,7 +121,7 @@ def load(
     }
 
     if path:
-        with open(path) as file:
+        with open(path, encoding="utf-8") as file:
             toml_data = tomllib.loads(file.read())
     else:
         toml_data = tomllib.loads(text)
