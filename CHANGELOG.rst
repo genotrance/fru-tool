@@ -20,6 +20,16 @@ Please see the fragment files in the `changelog.d directory`_.
 
 ..  scriv-insert-here
 
+.. _changelog-4.0.1:
+
+4.0.1 - 2024-05-30
+==================
+
+Fixed
+-----
+
+- Always specify UTF-8 encoding when reading TOML files.
+
 .. _changelog-4.0.0:
 
 4.0.0 - 2024-04-13
