@@ -11,7 +11,7 @@ readme = "README.rst"
 include = [
     "CHANGELOG.rst",
 ]
-repository = "https://github.com/kurtmckee/fru-tool/"
+repository = "https://github.com/genotrance/fru-tool/"
 keywords = ["fru", "ipmi"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",

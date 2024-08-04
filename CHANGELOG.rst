@@ -15,7 +15,7 @@ Unreleased changes
 
 Please see the fragment files in the `changelog.d directory`_.
 
-..  _changelog.d directory: https://github.com/kurtmckee/fru-tool/tree/main/changelog.d
+..  _changelog.d directory: https://github.com/genotrance/fru-tool/tree/main/changelog.d
 
 
 ..  scriv-insert-here
