@@ -194,3 +194,14 @@ def test_encoding():
 
     with unittest.mock.patch("builtins.open", replacement_open):
         assert fru.toml_format.load(path=path) is not None
+
+
+def test_include_values_default_to_false():
+    """Verify 'include_*' values default to false."""
+
+    path = os.path.join(os.path.dirname(__file__), "include_defaults_to_false.toml")
+    data = fru.toml_format.load(path)
+    assert "board" in data
+    assert "chassis" not in data
+    assert "product" not in data
+    assert "internal" not in data

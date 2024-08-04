@@ -141,10 +141,10 @@ def load(
 
     dates = (("board", "mfg_date_time"),)
 
-    # Remove sections that are explicitly excluded.
+    # Remove sections that are excluded, either explicitly or implicitly.
     for section in ["internal", "chassis", "board", "product", "multirecord"]:
         include_section = f"include_{section}"
-        if not data["common"].get(include_section, True) and section in data:
+        if not data["common"].get(include_section, False) and section in data:
             del data[section]
         if include_section in data["common"]:
             del data["common"][include_section]
