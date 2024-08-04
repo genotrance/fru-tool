@@ -20,6 +20,20 @@ Please see the fragment files in the `changelog.d directory`_.
 
 ..  scriv-insert-here
 
+.. _changelog-4.0.2:
+
+4.0.2 - 2024-08-04
+==================
+
+Changed
+-------
+
+-   Exclude FRU sections when the associated ``include_*`` key
+    has been removed from the ``[common]`` section. (#21)
+
+    The previous behavior was to assume a section should be included
+    unless the associated ``include_*`` key was explicitly set to false.
+
 .. _changelog-4.0.1:
 
 4.0.1 - 2024-05-30
