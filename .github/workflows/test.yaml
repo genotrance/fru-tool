@@ -45,6 +45,9 @@ jobs:
 
       - name: "Setup Pythons"
         uses: "actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f" # v5.1.1
+        env:
+          # Disable pip upgrade warnings while setting up Python versions.
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
         with:
           python-version: "${{
             format(
