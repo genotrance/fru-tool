@@ -1,0 +1,18 @@
+# Missing 'include_*' directives should default to false.
+
+[common]
+format_version = 1
+size = 256
+include_board = true
+
+[board]
+format_version = 1
+language_code = 0
+
+mfg_date_time = "2024-01-01 01:01"
+manufacturer = "Test Factory .Inc"
+product_name = "Test Board"
+serial_number = "01234"
+part_number = "5678"
+fru_file_id = "1"
+custom_fields = ["", ""]
