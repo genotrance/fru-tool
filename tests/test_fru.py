@@ -10,7 +10,6 @@
 
 import os
 
-# noinspection PyUnresolvedReferences,PyPackageRequirements
 import pytest
 
 import fru.fru_format
@@ -74,6 +73,10 @@ def test_bad_header_checksum():
 def test_checksum_of_zero():
     path = os.path.join(os.path.dirname(__file__), "checksum-zero.bin")
     fru.fru_format.load(path)
+
+
+def test_decode_6_bit_ascii():
+    assert fru.fru_format.decode_6_bit_ascii(b"d\xc9\xb2") == "DELL"
 
 
 @pytest.mark.parametrize("section", ["board", "chassis", "product"])
