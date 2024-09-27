@@ -15,10 +15,22 @@ Unreleased changes
 
 Please see the fragment files in the `changelog.d directory`_.
 
-..  _changelog.d directory: https://github.com/kurtmckee/fru-tool/tree/main/changelog.d
+..  _changelog.d directory: https://github.com/genotrance/fru-tool/tree/main/changelog.d
 
 
 ..  scriv-insert-here
+
+.. _changelog-4.1.0:
+
+4.1.0 - 2024-09-26
+==================
+
+Added
+-----
+
+-   Decode FRU fields encoded using 6-bit ASCII.
+
+    Note that it is currently not possible to encode fields back to 6-bit ASCII.
 
 .. _changelog-4.0.2:
 

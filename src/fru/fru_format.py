@@ -2,7 +2,7 @@
 # Copyright 2018-2024 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2017 Dell Technologies
 #
-# https://github.com/kurtmckee/fru-tool/
+# https://github.com/genotrance/fru-tool/
 #
 # Licensed under the terms of the MIT License:
 # https://opensource.org/licenses/MIT
@@ -49,8 +49,11 @@ def extract_values(blob: bytes, offset: int, names: List[str]):
         if type_length == 0xC1:
             return data
         length = type_length & 0x3F
-        # encoding = (ord(blob[offset:offset + 1]) & 0xc0) >> 6
-        data[name] = blob[offset + 1 : offset + length + 1].decode("ascii")
+        encoding = (ord(blob[offset : offset + 1]) & 0xC0) >> 6
+        if encoding == 2:  # 6-bit ASCII
+            data[name] = decode_6_bit_ascii(blob[offset + 1 : offset + length + 1])
+        else:
+            data[name] = blob[offset + 1 : offset + length + 1].decode("ascii")
         offset += length + 1
 
     while True:
@@ -58,10 +61,15 @@ def extract_values(blob: bytes, offset: int, names: List[str]):
         if type_length == 0xC1:
             return data
         length = type_length & 0x3F
-        # encoding = (ord(blob[offset:offset + 1]) & 0xc0) >> 6
-        data["custom_fields"].append(
-            blob[offset + 1 : offset + length + 1].decode("ascii")
-        )
+        encoding = (ord(blob[offset : offset + 1]) & 0xC0) >> 6
+        if encoding == 2:  # 6-bit ASCII
+            data["custom_fields"].append(
+                decode_6_bit_ascii(blob[offset + 1 : offset + length + 1])
+            )
+        else:
+            data["custom_fields"].append(
+                blob[offset + 1 : offset + length + 1].decode("ascii")
+            )
         offset += length + 1
 
 
@@ -384,3 +392,24 @@ def make_product(config):
     out += struct.pack("B", (0 - sum(bytearray(out))) & 0xFF)
 
     return out
+
+
+def decode_6_bit_ascii(blob: bytes) -> str:
+    """Decode bytes that encoded in 6-bit ASCII."""
+
+    extracted_bytes = b""
+    for block_offset in range(len(blob) // 3):
+        block = blob[block_offset:3]
+        extracted_bits = [
+            # Byte 1 -- lower 6 bits of the first byte
+            block[0] & 0b0011_1111,
+            # Byte 2 -- lower 4 bits of the second byte + upper 2 bits of the first byte
+            ((block[1] & 0b0000_1111) << 2) | ((block[0] & 0b1100_0000) >> 6),
+            # Byte 3 -- lower 2 bits of the third byte + upper 4 bits of the second byte
+            ((block[2] & 0b0000_0011) << 4) | ((block[1] & 0b1111_0000) >> 4),
+            # Byte 4 -- upper 6 bits of the third byte
+            (block[2] & 0b1111_1100) >> 2,
+        ]
+        # Each integer represents an ASCII character 0x20 greater than its value.
+        extracted_bytes += bytes([0x20 + bits for bits in extracted_bits])
+    return extracted_bytes.decode("ascii")
