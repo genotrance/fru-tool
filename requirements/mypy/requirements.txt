@@ -1,4 +1,4 @@
 mypy-extensions==1.0.0 ; python_version >= "3.8"
-mypy==1.11.1 ; python_version >= "3.8"
+mypy==1.11.2 ; python_version >= "3.8"
 tomli==2.0.1 ; python_version < "3.11" and python_version >= "3.8"
 typing-extensions==4.12.2 ; python_version >= "3.8"
