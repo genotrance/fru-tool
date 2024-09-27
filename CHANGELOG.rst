@@ -20,6 +20,18 @@ Please see the fragment files in the `changelog.d directory`_.
 
 ..  scriv-insert-here
 
+.. _changelog-4.1.0:
+
+4.1.0 - 2024-09-26
+==================
+
+Added
+-----
+
+-   Decode FRU fields encoded using 6-bit ASCII.
+
+    Note that it is currently not possible to encode fields back to 6-bit ASCII.
+
 .. _changelog-4.0.2:
 
 4.0.2 - 2024-08-04
