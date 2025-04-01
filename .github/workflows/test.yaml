@@ -44,7 +44,7 @@ jobs:
         uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683" # v4.2.2
 
       - name: "Setup Pythons"
-        uses: "actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38" # v5.4.0
+        uses: "actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55" # v5.5.0
         env:
           # Disable pip upgrade warnings while setting up Python versions.
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
@@ -59,11 +59,11 @@ jobs:
           allow-prereleases: true
 
       - name: "Detect Pythons"
-        uses: "kurtmckee/detect-pythons@38187a5464f266e93e5c1467699f7be2bf521d2e" # v1.1.0
+        uses: "kurtmckee/detect-pythons@4a7b361b5ee27eb35c8b5026ac757d02751d6688" # v1.1.1
 
       - name: "Restore cache"
         id: "restore-cache"
-        uses: "actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf" # v4.2.2
+        uses: "actions/cache@5a3ec84eff668545956fd18022155c47e93e2684" # v4.2.3
         with:
           path: |
             .mypy_cache/
