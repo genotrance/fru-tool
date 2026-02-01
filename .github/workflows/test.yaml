@@ -41,10 +41,10 @@ jobs:
     runs-on: "${{ matrix.os.runner }}"
     steps:
       - name: "Checkout the repository"
-        uses: "actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3" # v6.0.0
+        uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd" # v6.0.2
 
       - name: "Setup Pythons"
-        uses: "actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548" # v6.1.0
+        uses: "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405" # v6.2.0
         env:
           # Disable pip upgrade warnings while setting up Python versions.
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
@@ -63,7 +63,7 @@ jobs:
 
       - name: "Restore cache"
         id: "restore-cache"
-        uses: "actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830" # v4.3.0
+        uses: "actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306" # v5.0.3
         with:
           path: |
             .mypy_cache/
